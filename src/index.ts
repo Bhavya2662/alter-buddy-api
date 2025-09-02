@@ -38,10 +38,21 @@ class App {
     this.express.use(morgan("dev"));
     this.express.use(
       cors({
-        origin: "*",
+        origin: [
+          // Local development
+          "http://localhost:3000",
+          "http://localhost:3001",
+          "http://localhost:3002",
+          "http://localhost:3003",
+          "http://localhost:3004",
+          // Vercel deployments
+          "https://alter-buddy-rant-app.vercel.app",
+          "https://alter-buddy-admin-6do4gsj8n-bhavyas-projects-76b90fb1.vercel.app",
+          "https://alter-buddy-frontend-git-main-bhavyas-projects-76b90fb1.vercel.app"
+        ],
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        // allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
-        // credentials: true, // If needed
+        allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+        credentials: true
       })
     );
     // this.express.use(createClient({}));
