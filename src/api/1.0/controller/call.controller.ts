@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IController, IControllerRoutes } from "../../../interface";
-import { SDK, Room } from "@100mslive/server-sdk";
+// import HMS from "@100mslive/server-sdk";
 import { Ok, UnAuthorized } from "../../../utils";
 import { configDotenv } from "dotenv";
 import { HMSService } from "../../../services/100ms.service";
