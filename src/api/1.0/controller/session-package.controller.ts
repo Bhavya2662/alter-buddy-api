@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { SessionPackage } from "../../../model/session-package.model";
 import { Ok, UnAuthorized } from "../../../utils";
 import { IController, IControllerRoutes } from "../../../interface";
-import { AuthForMentor } from "../../../middleware";
+import { AuthForMentor, AuthForUser } from "../../../middleware";
 
 export class SessionPackageController implements IController {
   public routes: IControllerRoutes[] = [];
@@ -13,16 +13,19 @@ export class SessionPackageController implements IController {
         path: "/session/package",
         method: "POST",
         handler: this.CreatePackage,
+        middleware: [AuthForUser],
       },
       {
         path: "/session/package/:userId",
         method: "GET",
         handler: this.GetUserPackages,
+        middleware: [AuthForUser],
       },
       {
         path: "/session/package/use/:packageId",
         method: "PUT",
         handler: this.UseSessionFromPackage,
+        middleware: [AuthForUser],
       },
       {
         path: "/mentor/packages/:mentorId",

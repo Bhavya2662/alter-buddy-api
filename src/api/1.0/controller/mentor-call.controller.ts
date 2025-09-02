@@ -100,6 +100,13 @@ export class MentorCallSchedule implements IController {
     });
 
     this.routes.push({
+      handler: this.JoinSession,
+      method: "POST",
+      path: "/session/join",
+      middleware: [],
+    });
+
+    this.routes.push({
       handler: this.UpdateSlot,
       method: "PUT",
       path: "/mentor/slot/:slotId",
@@ -1140,4 +1147,141 @@ export class MentorCallSchedule implements IController {
       return UnAuthorized(res, err);
     }
   }
-}
+
+  public async JoinSession(req: Request, res: Response) {
+    try {
+      const { sessionId, userType, userId } = req.body;
+      
+      if (!sessionId || !userType || !userId) {
+        return UnAuthorized(res, "Missing required fields: sessionId, userType, userId");
+      }
+
+      // Find the chat session
+      const session = await Chat.findById(sessionId);
+      if (!session) {
+        return UnAuthorized(res, "Session not found");
+      }
+
+      // Verify user has access to this session
+      const hasAccess = 
+        (userType === 'user' && session.users.user.toString() === userId) ||
+        (userType === 'mentor' && session.users.mentor.toString() === userId);
+      
+      if (!hasAccess) {
+        return UnAuthorized(res, "Access denied to this session");
+      }
+
+      // Update join tracking
+       const updateField = userType === 'user' ? 'sessionDetails.userJoined' : 'sessionDetails.mentorJoined';
+       const joinTimeField = userType === 'user' ? 'sessionDetails.userJoinedAt' : 'sessionDetails.mentorJoinedAt';
+       const joinTime = new Date();
+       
+       await Chat.updateOne(
+         { _id: sessionId },
+         { 
+           $set: { 
+             [updateField]: true,
+             [joinTimeField]: joinTime,
+             status: 'ACTIVE'
+           } 
+         }
+       );
+
+       // Get updated session to check if both parties have joined
+       const updatedSession = await Chat.findById(sessionId);
+       
+       // Start timer logic based on session type
+       if (updatedSession) {
+         await this.checkAndStartSessionTimer(updatedSession);
+       }
+
+      // If this is the first person to join, start recording for video/audio calls
+      if (session.sessionDetails?.callType !== 'chat' && !session.sessionDetails?.recordingId) {
+        try {
+          const recordingResponse = await axios.post(
+            `https://api.100ms.live/v2/recordings/room/${session.sessionDetails.roomId}/start`,
+            {
+              meeting_url: `https://api.100ms.live/v2/rooms/${session.sessionDetails.roomId}`,
+              resolution: {
+                width: 1280,
+                height: 720
+              }
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          if (recordingResponse.data?.id) {
+            await Chat.updateOne(
+              { _id: sessionId },
+              {
+                $set: {
+                  'sessionDetails.recordingId': recordingResponse.data.id,
+                  'sessionDetails.recordingStatus': 'processing'
+                }
+              }
+            );
+          }
+        } catch (recordingError) {
+          console.error('Failed to start recording:', recordingError);
+          // Don't fail the join if recording fails
+        }
+      }
+
+      return Ok(res, {
+         message: `${userType} joined session successfully`,
+         joinTime,
+         sessionStatus: 'ACTIVE'
+       });
+     } catch (err) {
+       console.error('JoinSession error:', err);
+       return UnAuthorized(res, err instanceof Error ? err.message : "Unknown error occurred");
+     }
+   }
+
+   private async checkAndStartSessionTimer(session: any) {
+     try {
+       // For group sessions, timer should start immediately when session begins
+       if (session.sessionDetails?.callType === 'group') {
+         if (!session.sessionDetails?.timerStarted) {
+           await this.startSessionTimer(session._id);
+         }
+         return;
+       }
+
+       // For 1-on-1 sessions, timer starts only when both mentor and user have joined
+       const mentorJoined = session.sessionDetails?.mentorJoined || false;
+       const userJoined = session.sessionDetails?.userJoined || false;
+
+       if (mentorJoined && userJoined && !session.sessionDetails?.timerStarted) {
+         await this.startSessionTimer(session._id);
+       }
+     } catch (error) {
+       console.error('Error checking session timer:', error);
+     }
+   }
+
+   private async startSessionTimer(sessionId: string) {
+     try {
+       const actualStartTime = new Date();
+       
+       await Chat.updateOne(
+         { _id: sessionId },
+         {
+           $set: {
+             'sessionDetails.timerStarted': true,
+             'sessionDetails.actualStartTime': actualStartTime
+           }
+         }
+       );
+
+       console.log(`Session timer started for session ${sessionId} at ${actualStartTime}`);
+     } catch (error) {
+       console.error('Error starting session timer:', error);
+     }
+   }
+ }

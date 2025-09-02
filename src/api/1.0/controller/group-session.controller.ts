@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { GroupSession } from "../../../model/group-session.model";
 import { Ok, UnAuthorized } from "../../../utils";
 import { IController, IControllerRoutes } from "../../../interface";
-import { AuthForMentor } from "../../../middleware";
+import { AuthForMentor, AuthForUser } from "../../../middleware";
 
 export class GroupSessionController implements IController {
   public routes: IControllerRoutes[] = [];
@@ -24,6 +24,7 @@ export class GroupSessionController implements IController {
         path: "/group-session/book/:sessionId",
         method: "PUT",
         handler: this.BookGroupSession,
+        middleware: [AuthForUser],
       },
       {
         path: "/group-session/:id",

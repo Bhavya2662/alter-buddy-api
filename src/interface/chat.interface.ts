@@ -17,6 +17,12 @@ export interface IChatProps {
     duration: string;
     startTime: string;
     endTime: string;
+    actualStartTime?: Date;
+    mentorJoined?: boolean;
+    userJoined?: boolean;
+    timerStarted?: boolean;
+    userJoinedAt?: Date;
+    mentorJoinedAt?: Date;
     recordingId?: string;
     recordingUrl?: string;
     recordingStatus?: "recording" | "completed" | "failed" | "processing";

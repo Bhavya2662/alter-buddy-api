@@ -90,8 +90,8 @@ export class RantController implements IController {
       const userId = (req as any).user.id;
 
       // Validate session type
-      if (!sessionType || !["video", "audio", "chat"].includes(sessionType)) {
-        return BadRequest(res, "Invalid session type. Must be 'video', 'audio', or 'chat'");
+      if (!sessionType || !["audio", "chat"].includes(sessionType)) {
+        return BadRequest(res, "Invalid session type. Must be 'audio' or 'chat'");
       }
 
       // Verify user exists and is active

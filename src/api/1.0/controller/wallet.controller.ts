@@ -62,21 +62,25 @@ export class WalletController implements IController {
       handler: this.CreateBuddyCoinsRecharge,
       method: "POST",
       path: "/buddy-coins/recharge",
+      middleware: [AuthForUser],
     });
     this.routes.push({
       handler: this.ValidateRecharge,
       method: "GET",
       path: "/buddy-coins/process/:pLinkId",
+      middleware: [AuthForUser],
     });
     this.routes.push({
       handler: this.UseBuddyCoins,
       method: "PUT",
       path: "/buddy-coins/use",
+      middleware: [AuthForUser],
     });
     this.routes.push({
       handler: this.GetMyTransactions,
       method: "GET",
       path: "/buddy-coins/transactions/my",
+      middleware: [AuthForUser],
     });
   }
 

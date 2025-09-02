@@ -22,6 +22,12 @@ const ChatSchema = new mongoose.Schema<IChatProps>(
       duration: { type: mongoose.Schema.Types.String },
       startTime: { type: mongoose.Schema.Types.String },
       endTime: { type: mongoose.Schema.Types.String },
+      actualStartTime: { type: mongoose.Schema.Types.Date, required: false },
+      mentorJoined: { type: mongoose.Schema.Types.Boolean, default: false },
+      userJoined: { type: mongoose.Schema.Types.Boolean, default: false },
+      timerStarted: { type: mongoose.Schema.Types.Boolean, default: false },
+      userJoinedAt: { type: mongoose.Schema.Types.Date },
+      mentorJoinedAt: { type: mongoose.Schema.Types.Date },
       recordingId: { type: mongoose.Schema.Types.String, required: false },
       recordingUrl: { type: mongoose.Schema.Types.String, required: false },
       recordingStatus: {
