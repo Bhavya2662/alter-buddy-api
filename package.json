@@ -1,0 +1,29 @@
+{
+  "name": "alter-buddy-api",
+  "version": "1.0.0",
+  "description": "AlterBuddy Backend API",
+  "main": "build/index.js",
+  "scripts": {
+    "start": "node build/bin/www.js",
+    "dev": "nodemon src/index.ts",
+    "build": "tsc"
+  },
+  "engines": {
+    "node": "v16"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "mongoose": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "bcryptjs": "^2.4.3",
+    "nodemailer": "^6.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "typescript": "^4.7.0",
+    "nodemon": "^2.0.0",
+    "ts-node": "^10.0.0"
+  }
+}
