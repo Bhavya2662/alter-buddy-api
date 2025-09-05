@@ -59,6 +59,11 @@ export class AuthenticationController implements IController {
       path: "/admin/sign-in",
     });
     this.routes.push({
+      handler: this.AdminTest,
+      method: "GET",
+      path: "/admin/test",
+    });
+    this.routes.push({
       handler: this.MentorSignUp,
       method: "POST",
       path: "/mentor/sign-up",
@@ -383,42 +388,69 @@ export class AuthenticationController implements IController {
   }
 
   public async AdminSignIn(req: Request, res: Response) {
+    console.log('=== AdminSignIn method called ===');
+    console.log('Request body:', req.body);
+    console.log('Request headers:', req.headers);
     try {
       const { email, password } = req.body;
+      console.log('AdminSignIn attempt for email:', email);
+      
       if (!email || !password) {
+        console.log('Missing fields in admin login');
         return UnAuthorized(res, "missing fields");
-      } else {
-        const user = await User.findOne({ email });
-        if (!user) {
-          return UnAuthorized(res, "no user found");
-        }
-        if (user.acType !== "ADMIN") {
-          return UnAuthorized(res, "access denied");
-        }
-
-        if (!bcrypt.compareSync(password, user.password)) {
-          return UnAuthorized(res, "wrong password");
-        }
-        const token = jwt.sign(
-          {
-            id: user._id,
-          },
-          config.get("JWT_SECRET"),
-          { expiresIn: config.get("JWT_EXPIRE") }
-        );
-        await User.findByIdAndUpdate(
-          { _id: user._id },
-          { $set: { online: true } }
-        );
-        return Ok(res, {
-          token,
-          user: `${user.mobile} is logged in`,
-        });
       }
+      
+      const user = await User.findOne({ email });
+      if (!user) {
+        console.log('No user found for email:', email);
+        return UnAuthorized(res, "no user found");
+      }
+      
+      console.log('User found, acType:', user.acType);
+      if (user.acType !== "ADMIN") {
+        console.log('Access denied - user is not admin');
+        return UnAuthorized(res, "access denied");
+      }
+
+      console.log('Checking password...');
+      if (!bcrypt.compareSync(password, user.password)) {
+        console.log('Wrong password for admin:', email);
+        return UnAuthorized(res, "wrong password");
+      }
+      
+      console.log('Password correct, generating token...');
+       console.log('JWT config - Secret exists:', !!config.get("JWT_SECRET"), 'Expire:', config.get("JWT_EXPIRE"));
+       
+       const token = jwt.sign(
+         {
+           id: user._id,
+         },
+         config.get("JWT_SECRET"),
+         { expiresIn: config.get("JWT_EXPIRE") }
+       );
+      
+      console.log('Token generated, updating user online status...');
+      await User.findByIdAndUpdate(
+        { _id: user._id },
+        { $set: { online: true } }
+      );
+      
+      console.log('Admin login successful for:', email);
+      return Ok(res, {
+        token,
+        user: `${user.mobile || user.email} is logged in`,
+      });
     } catch (err) {
-      return UnAuthorized(res, err);
+      console.error('AdminSignIn error:', err);
+      return UnAuthorized(res, `Internal server error: ${err.message}`);
     }
   }
+
+  public async AdminTest(req: Request, res: Response) {
+    console.log('AdminTest endpoint hit!');
+    return Ok(res, { message: 'Admin test endpoint working' });
+  }
+
   public async MentorSignOut(req: Request, res: Response) {
     try {
       const token = getTokenFromHeader(req);

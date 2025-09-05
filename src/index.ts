@@ -28,10 +28,11 @@ class App {
       res.setHeader("X-Pinggy-No-Screen", "true");
       next();
     });
-    this.express.use(bodyParser.json());
-    this.express.use(bodyParser.urlencoded({ extended: true }));
-    this.express.use(express.json());
-    this.express.use(express.text());
+    
+    // Body parser setup
+    this.express.use(express.json({ limit: "50mb" }));
+    this.express.use(express.urlencoded({ extended: true, limit: "50mb" }));
+    
     this.express.set("ipaddr", "127.0.0.1");
     this.express.set("port", 8080);
     this.express.use(cookieParser());
