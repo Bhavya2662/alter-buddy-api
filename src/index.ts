@@ -50,7 +50,8 @@ class App {
           "https://alter-buddy-rant-app.vercel.app",
           "https://alter-buddy-admin-6do4gsj8n-bhavyas-projects-76b90fb1.vercel.app",
           "https://alter-buddy-frontend-git-main-bhavyas-projects-76b90fb1.vercel.app",
-          "https://apna-mentor-admin-master-main.vercel.app"
+          "https://apna-mentor-admin-master-main.vercel.app",
+          "https://alter-buddy-admin-qjsrduw1g-bhavyas-projects-76b90fb1.vercel.app"
         ],
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
