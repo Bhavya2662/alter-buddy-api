@@ -37,22 +37,23 @@ class App {
     this.express.set("port", 8080);
     this.express.use(cookieParser());
     this.express.use(morgan("dev"));
+    // Environment-based CORS configuration
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
     this.express.use(
       cors({
-        origin: [
-          // Local development
-          "http://localhost:3000",
-          "http://localhost:3001",
-          "http://localhost:3002",
-          "http://localhost:3003",
-          "http://localhost:3004",
-          // Vercel deployments
-          "https://alter-buddy-rant-app.vercel.app",
-          "https://alter-buddy-admin-6do4gsj8n-bhavyas-projects-76b90fb1.vercel.app",
-          "https://alter-buddy-frontend-git-main-bhavyas-projects-76b90fb1.vercel.app",
-          "https://apna-mentor-admin-master-main.vercel.app",
-          "https://alter-buddy-admin-qjsrduw1g-bhavyas-projects-76b90fb1.vercel.app"
-        ],
+        origin: isDevelopment 
+          ? true // Allow all origins in development
+          : [
+              // Local development (for testing)
+              "http://localhost:3000",
+              "http://localhost:3001",
+              "http://localhost:3002",
+              "http://localhost:3003",
+              "http://localhost:3004",
+              // Allow all Vercel deployments with regex
+              /^https:\/\/.*\.vercel\.app$/
+            ],
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
         credentials: true
