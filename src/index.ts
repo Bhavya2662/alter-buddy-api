@@ -37,23 +37,10 @@ class App {
     this.express.set("port", 8080);
     this.express.use(cookieParser());
     this.express.use(morgan("dev"));
-    // Environment-based CORS configuration
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
+    // CORS configuration - Allow all origins
     this.express.use(
       cors({
-        origin: isDevelopment 
-          ? true // Allow all origins in development
-          : [
-              // Local development (for testing)
-              "http://localhost:3000",
-              "http://localhost:3001",
-              "http://localhost:3002",
-              "http://localhost:3003",
-              "http://localhost:3004",
-              // Allow all Vercel deployments with regex
-              /^https:\/\/.*\.vercel\.app$/
-            ],
+        origin: true, // Allow all origins
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
         credentials: true
