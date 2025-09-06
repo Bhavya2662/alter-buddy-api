@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copy source code
 COPY . .
@@ -18,4 +18,5 @@ RUN npm run build
 EXPOSE 8080
 
 # Start the application
+CMD ["npm", "start"]
 CMD ["npm", "start"]
