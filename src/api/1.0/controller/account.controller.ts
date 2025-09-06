@@ -46,7 +46,7 @@ export class AccountController implements IController {
       handler: this.AdminProfile,
       method: "GET",
       path: "/admin/profile",
-      middleware: [AuthForMentor],
+      middleware: [AuthForAdmin],
     });
     this.routes.push({
       handler: this.GetMentorById,
