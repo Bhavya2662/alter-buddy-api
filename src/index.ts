@@ -37,10 +37,11 @@ class App {
     this.express.set("port", 8080);
     this.express.use(cookieParser());
     this.express.use(morgan("dev"));
-    // CORS configuration - Allow all origins
+    // CORS configuration - Use environment variable or allow all origins
+    const corsOrigin = process.env.CORS_ORIGIN || config.get("CORS_ORIGIN") || "*";
     this.express.use(
       cors({
-        origin: true, // Allow all origins
+        origin: corsOrigin === "*" ? true : corsOrigin.split(","),
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
         credentials: true

@@ -9,6 +9,15 @@
   "RAZORPAY_KEY_SECRET": "AWfmChxIR41R1GBfLrZcZXQV",
   "REACT_APP_100ms_SDK_KEY": "66a096cfadd12651a02f8b60",
   "REACT_APP_100ms_SDK_SECRET": "MUSTuzogNeTMRhdxUchctGsjOG-tFpyjqthKMY91lzuAdWFpy5zDRARhmu37443_4YxktoBcNd1y0fFWByZzr3LmDEJo0QiVRiiUe_wJAQgJlIqOoqSln8iZp7I5aDUSvYyKZCSXDO-ckV_-omsOHyri9sBfKHY4ue-bx-f-PSI=",
+  "REACT_APP_100MD_SDK_TOKEN": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTU1MTQyOTksImV4cCI6MTc1NjExOTA5OSwianRpIjoiZGE5ZjcyYjAtOGE1Zi00NDcxLWExNDYtY2VjZWYwOTNlZGFlIiwidHlwZSI6Im1hbmFnZW1lbnQiLCJ2ZXJzaW9uIjoyLCJuYmYiOjE3NTU1MTQyOTksImFjY2Vzc19rZXkiOiI2NmEwOTZjZmFkZDEyNjUxYTAyZjhiNjAifQ.NFwBrEIvlPCVXKPzADLmst4O_MsNo-FVIZq-TEzB4Eg",
   "REACT_APP_100MD_SDK_VIDEO_TEMPLATE": "66a096efad8abf3a324d273a",
-  "REACT_APP_100MD_SDK_AUDIO_TEMPLATE": "66a096efad8abf3a324d273a"
+  "REACT_APP_100MD_SDK_AUDIO_TEMPLATE": "66a096efad8abf3a324d273a",
+  "FRONTEND_URL": "*",
+  "ADMIN_API_KEY": "admin-webhook-key-123",
+  "SMTP_HOST": "smtp.gmail.com",
+  "SMTP_USER": "alterbuddy8@gmail.com",
+  "SMTP_PASS": "your-app-password",
+  "SMTP_FROM": "alterbuddy8@gmail.com",
+  "CORS_ORIGIN": "*",
+  "BACKEND_URL": "https://alter-buddy-api-production.up.railway.app"
 }
