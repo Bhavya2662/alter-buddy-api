@@ -6,9 +6,10 @@ import { Chat, Notification } from "../model";
 import { IChatProps } from "../interface/chat.interface";
 import mongoose from "mongoose";
 
-const port = normalizePort(process.env.PORT || 8080);
-const host = process.env.HOST || '0.0.0.0';
+const port = process.env.PORT || 3000; // Railway auto-assigns PORT
+const host = '0.0.0.0';
 app.set("port", port);
+
 
 export const server = http.createServer(app);
 
