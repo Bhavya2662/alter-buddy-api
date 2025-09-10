@@ -1,0 +1,11 @@
+[build]
+nixpacks = true
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/api/1.0/health"
+healthcheckTimeout = 300
+
+[variables]
+NODE_VERSION = "18.20.4"
+NIXPACKS_NODE_VERSION = "18"

@@ -7,6 +7,7 @@ import { IChatProps } from "../interface/chat.interface";
 import mongoose from "mongoose";
 
 const port = normalizePort(process.env.PORT || 8080);
+const host = process.env.HOST || '0.0.0.0';
 app.set("port", port);
 
 export const server = http.createServer(app);
@@ -152,9 +153,9 @@ const onError = (error: NodeJS.ErrnoException) => {
 const onListening = () => {
   const addr = server.address();
   const bind = typeof addr === "string" ? `pipe ${addr}` : `port ${addr.port}`;
-  console.info(`server enabled on ${bind}`);
+  console.info(`server enabled on ${bind} (Railway deployment)`);
 };
 
-server.listen(port);
+server.listen(port as number, host);
 server.on("error", onError);
 server.on("listening", onListening);

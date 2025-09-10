@@ -9,7 +9,7 @@
     "build": "tsc"
   },
   "engines": {
-    "node": "v16"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@100mslive/server-sdk": "^0.0.1",
