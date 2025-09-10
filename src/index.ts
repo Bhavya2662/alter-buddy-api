@@ -41,8 +41,8 @@ class App {
     const corsOrigin = process.env.CORS_ORIGIN || config.get("CORS_ORIGIN") || "*";
     this.express.use(
       cors({
-        origin: corsOrigin === "*" ? true : corsOrigin.split(","),
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+origin: ["https://alter-buddy-frontend.vercel.app"]
+,        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
         credentials: true
       })
