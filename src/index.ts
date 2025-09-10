@@ -43,7 +43,8 @@ class App {
         origin: true,
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-        credentials: true
+        credentials: true,
+        optionsSuccessStatus: 200
       })
     );
     // this.express.use(createClient({}));
