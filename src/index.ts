@@ -37,12 +37,11 @@ class App {
     // Remove hardcoded port setting - let Railway handle PORT via environment variable
     this.express.use(cookieParser());
     this.express.use(morgan("dev"));
-    // CORS configuration - Use environment variable or allow all origins
-    const corsOrigin = process.env.CORS_ORIGIN || config.get("CORS_ORIGIN") || "*";
+    // CORS configuration - Allow all origins for now to fix immediate issue
     this.express.use(
       cors({
-origin: ["https://alter-buddy-frontend.vercel.app"]
-,        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        origin: true,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
         credentials: true
       })

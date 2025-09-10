@@ -18,6 +18,6 @@
   "SMTP_USER": "alterbuddy8@gmail.com",
   "SMTP_PASS": "your-app-password",
   "SMTP_FROM": "alterbuddy8@gmail.com",
-  "CORS_ORIGIN": "https://alter-buddy-frontend.vercel.app",
+  "CORS_ORIGIN": "*",
   "BACKEND_URL": "https://alter-buddy-api-production.up.railway.app"
 }
