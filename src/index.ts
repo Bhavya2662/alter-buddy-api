@@ -34,7 +34,7 @@ class App {
     this.express.use(express.urlencoded({ extended: true, limit: "50mb" }));
     
     this.express.set("ipaddr", "127.0.0.1");
-    this.express.set("port", 8080);
+    // Remove hardcoded port setting - let Railway handle PORT via environment variable
     this.express.use(cookieParser());
     this.express.use(morgan("dev"));
     // CORS configuration - Use environment variable or allow all origins
