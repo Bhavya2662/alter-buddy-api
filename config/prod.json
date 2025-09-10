@@ -1,5 +1,5 @@
 {
-  "DB_PATH": "MONGODB_URI",
+  "DB_PATH": "mongodb+srv://alterbuddy8:lrp1NloOTKnTiQyI@alter-buddy.latngxs.mongodb.net/myApp?retryWrites=true&w=majority&appName=alter-buddy",
   "JWT_SECRET": "alter-buddy",
   "NODE_NO_WARNINGS": 1,
   "SUPPRESS_NO_CONFIG_WARNING": false,
