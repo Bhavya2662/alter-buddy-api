@@ -34,10 +34,6 @@ class App {
     this.express.use(express.urlencoded({ extended: true, limit: "50mb" }));
     
     this.express.set("ipaddr", "127.0.0.1");
-    const PORT = process.env.PORT || 8080;
-this.express.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
     // Remove hardcoded port setting - let Railway handle PORT via environment variable
     this.express.use(cookieParser());
     this.express.use(morgan("dev"));
@@ -68,6 +64,9 @@ origin: ["https://alter-buddy-frontend.vercel.app"]
 
   private async connectDb() {
     try {
+      // Fix Mongoose deprecation warning
+      mongoose.set('strictQuery', false);
+      
       const database = await mongoose.connect(config.get("DB_PATH"), {
         serverSelectionTimeoutMS: 30000,
         socketTimeoutMS: 45000,

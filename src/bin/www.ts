@@ -14,9 +14,16 @@ app.set("port", port);
 export const server = http.createServer(app);
 
 const io = new Server(server, {
+  path: '/socket.io/',
   cors: {
-    origin: "*",
+    origin: process.env.NODE_ENV === 'production' 
+      ? ["https://alter-buddy-frontend.vercel.app", "https://alter-buddy-api-production.up.railway.app"]
+      : "*",
+    methods: ["GET", "POST"],
+    credentials: true
   },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
 });
 
 // Store mentor socket connections
