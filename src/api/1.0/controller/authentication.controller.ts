@@ -90,6 +90,18 @@ export class AuthenticationController implements IController {
       method: "PUT",
       path: "/reset-password",
     });
+    this.routes.push({
+      handler: this.DeactivateUserAccount,
+      method: "PUT",
+      path: "/deactivate-user",
+      middleware: [AuthForUser],
+    });
+    this.routes.push({
+      handler: this.DeactivateMentorAccount,
+      method: "PUT",
+      path: "/deactivate-mentor",
+      middleware: [AuthForMentor],
+    });
   }
   public async UserSignIn(req: Request, res: Response) {
     try {
@@ -682,6 +694,78 @@ export class AuthenticationController implements IController {
       if (err.message === "jwt expired") {
         return UnAuthorized(res, "TOKEN_EXPIRE");
       } else return UnAuthorized(res, err);
+    }
+  }
+
+  public async DeactivateUserAccount(req: Request, res: Response) {
+    try {
+      const token = getTokenFromHeader(req);
+      const verified = verifyToken(token);
+      
+      if (!verified || !verified.id) {
+        return UnAuthorized(res, "Invalid or expired token");
+      }
+
+      const { reason } = req.body;
+      
+      // Update user to mark as deactivated
+      // In a real implementation, you might want to:
+      // 1. Set a 'deactivated' flag to true
+      // 2. Store the reason for analytics
+      // 3. Maybe schedule actual deletion for later (GDPR considerations)
+      
+      const user = await User.findByIdAndUpdate(
+        { _id: verified.id },
+        { $set: { block: true, deactivationReason: reason } },
+        { new: true }
+      );
+
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      // Remove auth token
+      res.removeHeader("authorization");
+      
+      return Ok(res, "Account deactivated successfully");
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async DeactivateMentorAccount(req: Request, res: Response) {
+    try {
+      const token = getTokenFromHeader(req);
+      const verified = verifyToken(token);
+      
+      if (!verified || !verified.id) {
+        return UnAuthorized(res, "Invalid or expired token");
+      }
+
+      const { reason } = req.body;
+      
+      // Update mentor to mark as deactivated
+      const mentor = await Mentor.findByIdAndUpdate(
+        { _id: verified.id },
+        { 
+          $set: { 
+            "accountStatus.block": true,
+            deactivationReason: reason 
+          } 
+        },
+        { new: true }
+      );
+
+      if (!mentor) {
+        return UnAuthorized(res, "Mentor not found");
+      }
+
+      // Remove auth token
+      res.removeHeader("authorization");
+      
+      return Ok(res, "Account deactivated successfully");
+    } catch (err) {
+      return UnAuthorized(res, err);
     }
   }
 }
