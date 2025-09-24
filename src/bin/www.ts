@@ -5,9 +5,11 @@ import { Chat, Notification } from "../model";
 import { IChatProps } from "../interface/chat.interface";
 import mongoose from "mongoose";
 
-const port = process.env.PORT || 3000; // Railway auto-assigns PORT
+const port = process.env.PORT || 3000;
 const host = '0.0.0.0';
-// Express app instance is already configured, no need to set port here
+
+console.log(`Registering route: POST /api/1.0/send-email`);
+console.log(`server enabled on port ${port} (Railway deployment)`);
 
 export const server = http.createServer(app);
 

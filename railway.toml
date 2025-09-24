@@ -5,7 +5,6 @@ nixpacks = true
 startCommand = "npm start"
 healthcheckPath = "/api/1.0/health"
 healthcheckTimeout = 300
-port = 8080
 
 [variables]
 NODE_VERSION = "18.20.4"

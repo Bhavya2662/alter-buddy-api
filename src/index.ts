@@ -85,10 +85,4 @@ const AppServer = app.express;
 // Export for Vercel
 export default AppServer;
 
-// For local development
-if (require.main === module) {
-  const port = parseInt(process.env.PORT || '3000', 10);
-  AppServer.listen(port, '0.0.0.0', () => {
-    console.log(`Server running on port ${port}`);
-  });
-}
+// Server startup is handled by bin/www.ts

@@ -2,9 +2,9 @@
   "name": "alter-buddy-api",
   "version": "1.0.0",
   "description": "AlterBuddy Backend API",
-  "main": "build/index.js",
+  "main": "build/bin/www.js",
   "scripts": {
-    "start": "node build/index.js",
+    "start": "node build/bin/www.js",
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "vercel-build": "npm run build"
