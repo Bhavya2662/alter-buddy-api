@@ -16,3 +16,4 @@ export * from "./notification.controller";
 export * from "./rant.controller";
 export * from "./packages.controller";
 export * from "./call.controller";
+export * from "./email.controller";

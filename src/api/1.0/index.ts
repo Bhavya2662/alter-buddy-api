@@ -3,21 +3,22 @@ import {
   AccountController,
   AuthenticationController,
   BlogController,
-  CategoryController,
-  FeaturesController,
-  HomeController,
-  MentorController,
-  MentorCallSchedule,
-  SessionPackageController,
-  MentorWalletController,
-  GroupSessionController,
-  WebsiteController,
-  PostController,
-  WalletController,
-  NotificationController,
-  RantController,
-  PackagesController,
   CallController,
+  CategoryController,
+  EmailController,
+  FeaturesController,
+  GroupSessionController,
+  HomeController,
+  MentorCallSchedule,
+  MentorController,
+  MentorWalletController,
+  NotificationController,
+  PackagesController,
+  PostController,
+  RantController,
+  SessionPackageController,
+  WalletController,
+  WebsiteController,
 } from "./controller";
 import { IController } from "../../interface";
 
@@ -69,4 +70,5 @@ export const registerRoutesV1 = (express: Express) => {
   routesHandler(express, new RantController());
   routesHandler(express, new PackagesController());
   routesHandler(express, new CallController());
+  routesHandler(express, new EmailController());
 };
