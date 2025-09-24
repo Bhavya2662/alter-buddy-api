@@ -11,9 +11,9 @@ export class EmailController implements IController {
     this.routes = [
       {
         path: "/send-email",
-        method: "post",
+        method: "POST",
         handler: this.sendEmail,
-        localMiddleware: [AuthForUser],
+        middleware: [AuthForUser],
       },
     ];
   }
