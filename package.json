@@ -4,9 +4,10 @@
   "description": "AlterBuddy Backend API",
   "main": "build/index.js",
   "scripts": {
-    "start": "node build/bin/www.js",
+    "start": "node build/src/index.js",
     "dev": "nodemon src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "vercel-build": "npm run build"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -2,22 +2,28 @@
   "version": 2,
   "builds": [
     {
-      "src": "build/bin/www.js",
+      "src": "src/index.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "/src/index.ts"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/build/bin/www.js"
+      "dest": "/src/index.ts"
     }
   ],
   "env": {
     "NODE_ENV": "production"
   },
   "functions": {
-    "build/bin/www.js": {
+    "src/index.ts": {
       "maxDuration": 30
     }
-  }
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "build"
 }
