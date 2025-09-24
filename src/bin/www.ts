@@ -9,7 +9,6 @@ const port = process.env.PORT || 3000; // Railway auto-assigns PORT
 const host = '0.0.0.0';
 // Express app instance is already configured, no need to set port here
 
-
 export const server = http.createServer(app);
 
 const io = new Server(server, {
