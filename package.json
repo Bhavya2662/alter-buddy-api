@@ -4,7 +4,7 @@
   "description": "AlterBuddy Backend API",
   "main": "build/index.js",
   "scripts": {
-    "start": "node build/src/index.js",
+    "start": "node build/index.js",
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "vercel-build": "npm run build"

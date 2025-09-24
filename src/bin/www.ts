@@ -1,6 +1,5 @@
 import http from "http";
 import app from "../index";
-import { normalizePort } from "../utils";
 import { Server } from "socket.io";
 import { Chat, Notification } from "../model";
 import { IChatProps } from "../interface/chat.interface";
@@ -8,7 +7,7 @@ import mongoose from "mongoose";
 
 const port = process.env.PORT || 3000; // Railway auto-assigns PORT
 const host = '0.0.0.0';
-app.set("port", port);
+// Express app instance is already configured, no need to set port here
 
 
 export const server = http.createServer(app);
