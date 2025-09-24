@@ -7,6 +7,7 @@ import { errorHandler, notFoundMiddleware } from "./middleware";
 import { registerRoutesV1 } from "./api";
 import cookieParser from "cookie-parser";
 import config from "config";
+import { CronService } from "./services/cron.service";
 // import "./utils/cron.utils";
 
 class App {
@@ -19,6 +20,7 @@ class App {
     this.routes();
     this.useErrorHandler();
     this.useNotFoundMiddleware();
+    this.initializeCronJobs();
   }
 
   // Configure Express middleware.
@@ -75,6 +77,10 @@ class App {
     } catch (err) {
       return console.log(err);
     }
+  }
+
+  private initializeCronJobs(): void {
+    CronService.initializeCronJobs();
   }
 }
 

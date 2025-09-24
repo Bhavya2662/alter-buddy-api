@@ -14,6 +14,8 @@ import config from "config";
 import { IUserProps } from "interface/user.interface";
 import { AuthForAdmin, AuthForMentor, AuthForUser } from "../../../middleware";
 import Nodemailer, { SendMailOptions } from "nodemailer";
+import { OTPService } from "../../../services/otp.service";
+import { DeactivationService } from "../../../services/deactivation.service";
 
 export class AuthenticationController implements IController {
   public routes: IControllerRoutes[] = [];
@@ -88,19 +90,46 @@ export class AuthenticationController implements IController {
     this.routes.push({
       handler: this.UserResetPassword,
       method: "PUT",
-      path: "/reset-password",
+      path: "/user/reset-password",
+    });
+    this.routes.push({
+      handler: this.VerifyEmailOTP,
+      method: "POST",
+      path: "/user/verify-email-otp",
+    });
+    this.routes.push({
+      handler: this.VerifyMobileOTP,
+      method: "POST",
+      path: "/user/verify-mobile-otp",
+    });
+    this.routes.push({
+      handler: this.ResendOTP,
+      method: "POST",
+      path: "/user/resend-otp",
     });
     this.routes.push({
       handler: this.DeactivateUserAccount,
       method: "PUT",
-      path: "/deactivate-user",
+      path: "/user/deactivate",
       middleware: [AuthForUser],
     });
     this.routes.push({
-      handler: this.DeactivateMentorAccount,
+      handler: this.ReactivateUserAccount,
       method: "PUT",
-      path: "/deactivate-mentor",
-      middleware: [AuthForMentor],
+      path: "/user/reactivate",
+      middleware: [AuthForUser],
+    });
+    this.routes.push({
+      handler: this.AdminDeactivateUser,
+      method: "PUT",
+      path: "/admin/deactivate-user/:userId",
+      middleware: [AuthForAdmin],
+    });
+    this.routes.push({
+      handler: this.AdminReactivateUser,
+      method: "PUT",
+      path: "/admin/reactivate-user/:userId",
+      middleware: [AuthForAdmin],
     });
   }
   public async UserSignIn(req: Request, res: Response) {
@@ -146,36 +175,65 @@ export class AuthenticationController implements IController {
 
   public async UserSignUp(req: Request, res: Response) {
     try {
-      const { email, password, name, mobile }: IUserProps = req.body;
+      const { emails, password, name, mobiles }: {
+        emails: string[];
+        password: string;
+        name: { firstName: string; lastName: string };
+        mobiles: string[];
+      } = req.body;
 
-      if (!email || !password || !mobile || !password) {
+      if (!emails || !password || !mobiles || !name) {
         return UnAuthorized(res, "missing fields");
       }
 
-      const user = await User.findOne({ email });
-
-      if (user) {
-        return UnAuthorized(res, "user is already registered");
+      // Validate signup requirements: 1 mobile + 2+ emails OR 1 email + 2+ mobiles
+      const emailCount = emails.length;
+      const mobileCount = mobiles.length;
+      
+      if (!((mobileCount === 1 && emailCount >= 2) || (emailCount === 1 && mobileCount >= 2))) {
+        return UnAuthorized(res, "Invalid signup requirements. You need either 1 mobile + 2+ emails OR 1 email + 2+ mobiles");
       }
+
+      // Use primary email (first one) for user creation
+      const primaryEmail = emails[0];
+      const primaryMobile = mobiles[0];
+
+      // Check if user already exists with primary email
+      const existingUser = await User.findOne({ email: primaryEmail });
+      if (existingUser) {
+        return UnAuthorized(res, "user is already registered with this email");
+      }
+
+      // Check if user already exists with primary mobile
+      const existingMobileUser = await User.findOne({ mobile: primaryMobile });
+      if (existingMobileUser) {
+        return UnAuthorized(res, "user is already registered with this mobile number");
+      }
+
       const hashed = bcrypt.hashSync(password, 10);
 
       const newUser = await new User({
         acType: "USER",
         block: false,
-        email,
+        email: primaryEmail,
         online: false,
         password: hashed,
         verified: false,
-        mobile,
+        mobile: primaryMobile,
         name: {
           firstName: name.firstName,
           lastName: name.lastName,
         },
       }).save();
+      
       await new BuddyCoins({
         balance: 0,
         userId: newUser._id,
       }).save();
+
+      // Generate and send OTPs
+      const emailOTPResult = await OTPService.generateAndSendEmailOTP(newUser._id.toString(), primaryEmail);
+      const mobileOTPResult = await OTPService.generateAndSendMobileOTP(newUser._id.toString(), primaryMobile);
 
       const token = jwt.sign(
         {
@@ -184,10 +242,21 @@ export class AuthenticationController implements IController {
         config.get("JWT_SECRET"),
         { expiresIn: config.get("JWT_EXPIRE") }
       );
+
       return Ok(res, {
         token,
-        mobile: newUser.mobile,
-        user: newUser,
+        userId: newUser._id,
+        message: "User registered successfully. Please verify your email and mobile with the OTPs sent.",
+        otpStatus: {
+          email: emailOTPResult,
+          mobile: mobileOTPResult,
+        },
+        user: {
+          id: newUser._id,
+          email: newUser.email,
+          mobile: newUser.mobile,
+          name: newUser.name,
+        },
       });
     } catch (err) {
       return UnAuthorized(res, err);
@@ -706,28 +775,28 @@ export class AuthenticationController implements IController {
         return UnAuthorized(res, "Invalid or expired token");
       }
 
-      const { reason } = req.body;
+      const { type, reason, reactivationDate } = req.body;
       
-      // Update user to mark as deactivated
-      // In a real implementation, you might want to:
-      // 1. Set a 'deactivated' flag to true
-      // 2. Store the reason for analytics
-      // 3. Maybe schedule actual deletion for later (GDPR considerations)
-      
-      const user = await User.findByIdAndUpdate(
-        { _id: verified.id },
-        { $set: { block: true, deactivationReason: reason } },
-        { new: true }
-      );
-
-      if (!user) {
-        return UnAuthorized(res, "User not found");
+      if (!type || !['temporary', 'permanent'].includes(type)) {
+        return UnAuthorized(res, "Invalid deactivation type. Use 'temporary' or 'permanent'");
       }
 
-      // Remove auth token
-      res.removeHeader("authorization");
-      
-      return Ok(res, "Account deactivated successfully");
+      let result;
+      if (type === 'temporary') {
+        const reactivationDateObj = reactivationDate ? new Date(reactivationDate) : undefined;
+        result = await DeactivationService.deactivateTemporarily(verified.id, reason, reactivationDateObj);
+      } else {
+        result = await DeactivationService.deactivatePermanently(verified.id, reason);
+      }
+
+      if (!result) {
+        return UnAuthorized(res, "Failed to deactivate account");
+      }
+
+      return Ok(res, {
+        message: `Account deactivated ${type === 'temporary' ? 'temporarily' : 'permanently'}`,
+        deactivation: result.deactivation,
+      });
     } catch (err) {
       return UnAuthorized(res, err);
     }
@@ -764,6 +833,194 @@ export class AuthenticationController implements IController {
       res.removeHeader("authorization");
       
       return Ok(res, "Account deactivated successfully");
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async VerifyEmailOTP(req: Request, res: Response) {
+    try {
+      const { userId, otp } = req.body;
+
+      if (!userId || !otp) {
+        return UnAuthorized(res, "Missing userId or OTP");
+      }
+
+      const result = await OTPService.verifyEmailOTP(userId, otp);
+      
+      if (result.success) {
+        return Ok(res, {
+          message: "Email verified successfully",
+          verified: true,
+        });
+      } else {
+        return UnAuthorized(res, result.message);
+      }
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async VerifyMobileOTP(req: Request, res: Response) {
+    try {
+      const { userId, otp } = req.body;
+
+      if (!userId || !otp) {
+        return UnAuthorized(res, "Missing userId or OTP");
+      }
+
+      const result = await OTPService.verifyMobileOTP(userId, otp);
+      
+      if (result.success) {
+        return Ok(res, {
+          message: "Mobile verified successfully",
+          verified: true,
+        });
+      } else {
+        return UnAuthorized(res, result.message);
+      }
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async ResendOTP(req: Request, res: Response) {
+    try {
+      const { userId, type } = req.body; // type: 'email' or 'mobile'
+
+      if (!userId || !type) {
+        return UnAuthorized(res, "Missing userId or type");
+      }
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      let result;
+      if (type === 'email') {
+        result = await OTPService.generateAndSendEmailOTP(userId, user.email);
+      } else if (type === 'mobile') {
+        result = await OTPService.generateAndSendMobileOTP(userId, user.mobile);
+      } else {
+        return UnAuthorized(res, "Invalid type. Use 'email' or 'mobile'");
+      }
+
+      return Ok(res, {
+        message: `OTP resent to ${type} successfully`,
+        result,
+      });
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  /**
+   * User self-reactivation (only for temporary deactivation)
+   */
+  public async ReactivateUserAccount(req: Request, res: Response) {
+    try {
+      const token = getTokenFromHeader(req);
+      const verified = verifyToken(token);
+
+      const user = await User.findById(verified.id);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      if (!user.deactivation?.isDeactivated) {
+        return UnAuthorized(res, "Account is not deactivated");
+      }
+
+      if (user.deactivation.type === 'permanent') {
+        return UnAuthorized(res, "Cannot reactivate permanently deactivated account. Contact admin.");
+      }
+
+      const result = await DeactivationService.reactivateUser(verified.id);
+      if (!result) {
+        return UnAuthorized(res, "Failed to reactivate account");
+      }
+
+      return Ok(res, {
+        message: "Account reactivated successfully",
+        user: result,
+      });
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  /**
+   * Admin deactivate user
+   */
+  public async AdminDeactivateUser(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+      const { type, reason, reactivationDate } = req.body;
+
+      if (!userId) {
+        return UnAuthorized(res, "User ID is required");
+      }
+
+      if (!type || !['temporary', 'permanent'].includes(type)) {
+        return UnAuthorized(res, "Invalid deactivation type. Use 'temporary' or 'permanent'");
+      }
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      let result;
+      if (type === 'temporary') {
+        const reactivationDateObj = reactivationDate ? new Date(reactivationDate) : undefined;
+        result = await DeactivationService.deactivateTemporarily(userId, reason, reactivationDateObj);
+      } else {
+        result = await DeactivationService.deactivatePermanently(userId, reason);
+      }
+
+      if (!result) {
+        return UnAuthorized(res, "Failed to deactivate user account");
+      }
+
+      return Ok(res, {
+        message: `User account deactivated ${type === 'temporary' ? 'temporarily' : 'permanently'}`,
+        user: result,
+      });
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  /**
+   * Admin reactivate user
+   */
+  public async AdminReactivateUser(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return UnAuthorized(res, "User ID is required");
+      }
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      if (!user.deactivation?.isDeactivated) {
+        return UnAuthorized(res, "User account is not deactivated");
+      }
+
+      const result = await DeactivationService.reactivateUser(userId);
+      if (!result) {
+        return UnAuthorized(res, "Failed to reactivate user account");
+      }
+
+      return Ok(res, {
+        message: "User account reactivated successfully",
+        user: result,
+      });
     } catch (err) {
       return UnAuthorized(res, err);
     }

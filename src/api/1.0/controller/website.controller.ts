@@ -25,6 +25,12 @@ export class WebsiteController implements IController {
       method: "GET",
       path: "/website/users/:userId",
     });
+    this.routes.push({
+      handler: this.DeleteUserById,
+      method: "DELETE",
+      path: "/website/users/:id",
+      middleware: [AuthForAdmin],
+    });
   }
 
   public async GetAllCalls(req: Request, res: Response) {
@@ -67,6 +73,19 @@ export class WebsiteController implements IController {
       const { userId } = req.params;
       const user = await User.findById({ _id: userId });
       return Ok(res, user);
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async DeleteUserById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const deletedUser = await User.findByIdAndDelete(id);
+      if (!deletedUser) {
+        return UnAuthorized(res, "User not found");
+      }
+      return Ok(res, { message: "User deleted successfully", user: deletedUser });
     } catch (err) {
       return UnAuthorized(res, err);
     }

@@ -17,6 +17,27 @@ const UserSchema = new mongoose.Schema<IUserProps>(
           referralCode: { type: mongoose.Schema.Types.String },
           myInitialCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: "SubCategory" }],
           dob: { type: mongoose.Schema.Types.String },
+          deactivation: {
+               isDeactivated: { type: mongoose.Schema.Types.Boolean, default: false },
+               type: { type: mongoose.Schema.Types.String, enum: ["temporary", "permanent"] },
+               deactivatedAt: { type: mongoose.Schema.Types.Date },
+               reactivationDate: { type: mongoose.Schema.Types.Date },
+               reason: { type: mongoose.Schema.Types.String },
+               markedForDeletion: { type: mongoose.Schema.Types.Boolean, default: false },
+               deletionScheduledAt: { type: mongoose.Schema.Types.Date },
+          },
+          otp: {
+               mobile: {
+                    code: { type: mongoose.Schema.Types.String },
+                    expiresAt: { type: mongoose.Schema.Types.Date },
+                    verified: { type: mongoose.Schema.Types.Boolean, default: false },
+               },
+               email: {
+                    code: { type: mongoose.Schema.Types.String },
+                    expiresAt: { type: mongoose.Schema.Types.Date },
+                    verified: { type: mongoose.Schema.Types.Boolean, default: false },
+               },
+          },
      },
      {
           timestamps: true,
