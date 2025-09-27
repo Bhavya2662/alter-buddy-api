@@ -40,6 +40,10 @@ export interface IChatProps {
   status?: callStatus;
   isAnonymous?: boolean;
   anonymousSessionId?: string;
+  packageId?: mongoose.Schema.Types.ObjectId; // Reference to SessionPackage for package sessions
+  isSupportSession?: boolean; // Indicates if this is a 1-week chat support session
+  supportExpiryDate?: Date; // Expiry date for support sessions
+  originalPackageId?: mongoose.Schema.Types.ObjectId; // Reference to the original package that triggered this support session
 }
 export type callStatus =
   | "REJECTED"

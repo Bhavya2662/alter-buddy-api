@@ -59,6 +59,25 @@ const ChatSchema = new mongoose.Schema<IChatProps>(
       type: mongoose.Schema.Types.String,
       required: false,
     },
+    packageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SessionPackage",
+      required: false,
+    },
+    isSupportSession: {
+      type: mongoose.Schema.Types.Boolean,
+      default: false,
+      required: false,
+    },
+    supportExpiryDate: {
+      type: mongoose.Schema.Types.Date,
+      required: false,
+    },
+    originalPackageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SessionPackage",
+      required: false,
+    },
   },
   {
     timestamps: true,

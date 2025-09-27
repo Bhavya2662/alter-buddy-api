@@ -112,6 +112,18 @@ export class MentorCallSchedule implements IController {
       path: "/mentor/slot/:slotId",
       middleware: [AuthForMentor],
     });
+    // Add missing routes that tests expect
+    this.routes.push({
+      handler: this.BookSlotByUserId,
+      method: "POST",
+      path: "/mentor/book-slot",
+      middleware: [AuthForUser],
+    });
+    this.routes.push({
+      handler: this.GetSlotByMentorId,
+      method: "GET",
+      path: "/mentor/slots/:mentorId",
+    });
   }
 
   public async GetAllSlots(req: Request, res: Response) {
@@ -129,7 +141,8 @@ export class MentorCallSchedule implements IController {
       const id = verifyToken(token);
       const calls = await Chat.find({ "users.mentor": id.id })
         .populate("users.mentor")
-        .populate("users.user");
+        .populate("users.user")
+        .populate("packageId");
       return Ok(res, calls);
     } catch (err) {
       return UnAuthorized(res, err);
@@ -143,7 +156,8 @@ export class MentorCallSchedule implements IController {
       const calls = await Chat.find({ "users.user": id.id })
         .sort({ createdAt: -1 })
         .populate("users.mentor")
-        .populate("users.user");
+        .populate("users.user")
+        .populate("packageId");
       return Ok(res, calls);
     } catch (err) {
       return UnAuthorized(res, err);
@@ -375,6 +389,9 @@ export class MentorCallSchedule implements IController {
           return UnAuthorized(res, "Session package is not active.");
         }
         
+        // Implement no-charge logic for mutual discussion sessions until last session
+        const isLastSession = sessionPackage.remainingSessions === 1;
+        
         // Use session from package
         sessionPackage.remainingSessions -= 1;
         if (sessionPackage.remainingSessions === 0) {
@@ -382,9 +399,236 @@ export class MentorCallSchedule implements IController {
         }
         await sessionPackage.save();
         
-        totalCost = 0; // No wallet deduction for package sessions
-        paymentMethod = 'package';
-        console.log('DEBUG: Used session from package, remaining:', sessionPackage.remainingSessions);
+        if (isLastSession) {
+          // Last session: Apply normal charging logic
+          console.log('DEBUG: Last session in package - applying charges');
+          const packages = await Packages.findOne({
+            packageType: callType,
+            mentorId: mentor._id,
+          }).lean();
+          
+          const userWallet = await BuddyCoins.findOne({ userId }).lean();
+          
+          if (!packages || !userWallet) {
+            return UnAuthorized(res, "Package or Wallet not found for last session payment.");
+          }
+
+          totalCost = packages.price * parseInt(time);
+          const slotBalance = userWallet.balance - totalCost;
+          if (slotBalance < 0) {
+            return UnAuthorized(res, "Insufficient balance for last session.");
+          }
+
+          // Update wallet balance and create transaction record
+          await BuddyCoins.updateOne({ userId }, { balance: slotBalance });
+          
+          // Create wallet transaction record
+          transactionId = `SLOT-${Date.now()}`;
+          await new Transaction({
+            transactionId,
+            transactionType: 'session_booking',
+            closingBal: slotBalance,
+            debitAmt: totalCost,
+            walletId: userWallet._id,
+            userId: user._id,
+            status: 'success',
+          }).save();
+          
+          // Send payment notification for last session booking
+          await PaymentNotificationService.sendPaymentNotification({
+            userId: user._id.toString(),
+            userName: `${user.name.firstName} ${user.name.lastName}`,
+            userEmail: user.email,
+            amount: totalCost,
+            transactionId,
+            paymentId: `BOOKING-${slotId || Date.now()}`,
+            status: 'success',
+            transactionType: 'session_booking',
+            timestamp: new Date()
+          });
+          
+          paymentMethod = 'wallet';
+          
+          // Create 1-week chat support after last package session
+          console.log('DEBUG: Creating 1-week chat support after last package session');
+          try {
+            const supportStartTime = new Date();
+            const supportEndTime = new Date(supportStartTime.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+            const supportRoomId = generateRandomRoomId();
+            const frontendUrl = process.env.FRONTEND_URL || "https://alterbuddy.com";
+            const supportChatUrl = `${frontendUrl}/user/chat/${mentor._id}/${supportRoomId}`;
+            
+            const chatSupportData = {
+              users: {
+                user: userId,
+                mentor: mentorId,
+              },
+              sessionDetails: {
+                roomId: supportRoomId,
+                roomCode: {
+                  host: undefined,
+                  mentor: undefined,
+                },
+                roomName: `Package-Support-${Date.now()}`,
+                callType: 'chat',
+                duration: '10080', // 7 days in minutes (7 * 24 * 60)
+                startTime: supportStartTime.toISOString(),
+                endTime: supportEndTime.toISOString(),
+                recordingId: null,
+                recordingUrl: null,
+              },
+              status: "ACTIVE",
+              packageId: sessionPackage._id,
+              isSupportSession: true,
+              supportExpiryDate: supportEndTime,
+              originalPackageId: sessionPackage._id
+            };
+            
+            try {
+              const createdSession = await Chat.create(chatSupportData);
+              console.log('DEBUG: 1-week chat support session created successfully', createdSession._id);
+            } catch (error) {
+              console.error('DEBUG: Error creating chat support session:', error);
+              throw error;
+            }
+            
+            // Send notification email about chat support availability
+            const supportEmailOptions = {
+              from: process.env.SMTP_FROM,
+              to: user.email,
+              subject: "🎉 Your Package is Complete + 1 Week Free Chat Support!",
+              html: `
+                <!DOCTYPE html>
+                <html>
+                  <head>
+                    <meta charset="UTF-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <title>Package Complete - Chat Support Available</title>
+                    <style>
+                      body {
+                        font-family: Arial, sans-serif;
+                        background-color: #f4f4f4;
+                        margin: 0;
+                        padding: 20px;
+                      }
+                      .email-container {
+                        max-width: 600px;
+                        margin: 0 auto;
+                        background-color: #ffffff;
+                        padding: 20px;
+                        border-radius: 5px;
+                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                      }
+                      .email-header {
+                        text-align: center;
+                        background-color: #4caf50;
+                        padding: 20px;
+                        color: #ffffff;
+                        border-radius: 5px 5px 0 0;
+                      }
+                      .email-body {
+                        padding: 20px;
+                        color: #333333;
+                      }
+                      .support-button {
+                        display: inline-block;
+                        padding: 15px 25px;
+                        background-color: #2196F3;
+                        color: #ffffff;
+                        text-decoration: none;
+                        border-radius: 5px;
+                        margin: 20px 0;
+                      }
+                      .support-button:hover {
+                        background-color: #1976D2;
+                      }
+                      .email-footer {
+                        text-align: center;
+                        font-size: 12px;
+                        color: #999999;
+                        margin-top: 20px;
+                      }
+                      .highlight {
+                        background-color: #fff3cd;
+                        padding: 15px;
+                        border-radius: 5px;
+                        border-left: 4px solid #ffc107;
+                        margin: 15px 0;
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    <div class="email-container">
+                      <div class="email-header">
+                        <h1>🎉 Package Complete!</h1>
+                      </div>
+                      <div class="email-body">
+                        <p>Hi ${user.name.firstName} ${user.name.lastName},</p>
+                        <p>Congratulations! You have successfully completed your session package with <strong>${mentor.name.firstName} ${mentor.name.lastName}</strong>.</p>
+                        
+                        <div class="highlight">
+                          <h3>🎁 Bonus: 1 Week Free Chat Support!</h3>
+                          <p>As a thank you for completing your package, you now have <strong>1 week of free chat support</strong> with your mentor.</p>
+                          <p><strong>Available until:</strong> ${supportEndTime.toLocaleDateString()} at ${supportEndTime.toLocaleTimeString()}</p>
+                        </div>
+                        
+                        <p>You can use this chat support for:</p>
+                        <ul>
+                          <li>Follow-up questions about your sessions</li>
+                          <li>Quick clarifications and guidance</li>
+                          <li>Continued support on your journey</li>
+                        </ul>
+                        
+                        <p style="text-align: center;">
+                          <a href="${supportChatUrl}" class="support-button">Start Chat Support</a>
+                        </p>
+                        
+                        <p>Thank you for choosing Alter Buddy for your mentorship journey!</p>
+                      </div>
+                      <div class="email-footer">
+                        <p>&copy; 2025 Alter Buddy. All rights reserved.</p>
+                      </div>
+                    </div>
+                  </body>
+                </html>
+              `,
+            };
+            
+            // Send support notification email asynchronously
+             const sendSupportEmail = async () => {
+               try {
+                 const transporter = nodemailer.createTransport({
+                   host: process.env.SMTP_HOST,
+                   port: 587,
+                   secure: false,
+                   auth: {
+                     user: process.env.SMTP_USER,
+                     pass: process.env.SMTP_PASS,
+                   },
+                   tls: { rejectUnauthorized: true },
+                 });
+                 await transporter.sendMail(supportEmailOptions);
+                 console.log('DEBUG: Chat support notification email sent successfully');
+               } catch (emailError) {
+                 console.error('Failed to send chat support notification email:', emailError);
+               }
+             };
+            
+            // Send email asynchronously without waiting
+            sendSupportEmail();
+            
+          } catch (supportError) {
+            console.error('Failed to create 1-week chat support:', supportError);
+            // Don't fail the main booking process if support creation fails
+          }
+        } else {
+          // Mutual discussion sessions (all except last): No charge
+          console.log('DEBUG: Mutual discussion session - no charge applied');
+          totalCost = 0;
+          paymentMethod = 'package';
+        }
+        
+        console.log('DEBUG: Used session from package, remaining:', sessionPackage.remainingSessions, 'isLastSession:', isLastSession);
       } else {
         // Regular wallet-based payment
         console.log('DEBUG: Looking for regular package with:', { packageType: callType, mentorId: mentor._id });
@@ -513,32 +757,34 @@ export class MentorCallSchedule implements IController {
       const startTime = new Date();
       const endTime = new Date(startTime.getTime() + parseInt(time) * 60000); // Add minutes in milliseconds
 
-      // Create mentor wallet transaction for all bookings (both slot and non-slot)
-      const totalAmount = totalCost;
-      const mentorShare = totalAmount * 0.7;
-      const adminShare = totalAmount * 0.3;
+      // Create mentor wallet transaction only when there's actual payment (totalCost > 0)
+      if (totalCost > 0) {
+        const totalAmount = totalCost;
+        const mentorShare = totalAmount * 0.7;
+        const adminShare = totalAmount * 0.3;
 
-      await MentorWallet.create({
-        userId,
-        mentorId,
-        slotId: type === "slot" ? slotId : undefined,
-        amount: totalAmount,
-        mentorShare,
-        adminShare,
-        type: "credit", // Changed to credit since mentor receives payment
-        status: "confirmed",
-        description: "User booked a mentor session",
-        sessionDetails: {
-          duration: parseInt(time),
-          callType: callType,
-          sessionDate: startTime,
-          sessionTime: moment(startTime).format("hh:mm A"),
-          bookingType: type === "slot" ? "slot" : "instant",
-        },
-      });
+        await MentorWallet.create({
+          userId,
+          mentorId,
+          slotId: type === "slot" ? slotId : undefined,
+          amount: totalAmount,
+          mentorShare,
+          adminShare,
+          type: "credit", // Changed to credit since mentor receives payment
+          status: "confirmed",
+          description: packageId ? "User booked final package session" : "User booked a mentor session",
+          sessionDetails: {
+            duration: parseInt(time),
+            callType: callType,
+            sessionDate: startTime,
+            sessionTime: moment(startTime).format("hh:mm A"),
+            bookingType: type === "slot" ? "slot" : "instant",
+          },
+        });
+      }
 
       if (type != "slot") {
-        await Chat.create({
+        const chatData: any = {
           users: {
             user: userId,
             mentor: mentorId,
@@ -558,7 +804,14 @@ export class MentorCallSchedule implements IController {
             recordingUrl: null,
           },
           status: "PENDING",
-        });
+        };
+        
+        // Add packageId if this is a package session
+        if (packageId) {
+          chatData.packageId = packageId;
+        }
+        
+        await Chat.create(chatData);
 
         // Send emails asynchronously without blocking the booking process
         const sendEmails = async () => {
