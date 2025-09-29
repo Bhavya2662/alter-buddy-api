@@ -1,7 +1,8 @@
 import http from "http";
 import app from "../index";
+import { normalizePort } from "../utils";
 import { Server } from "socket.io";
-import { Chat, Notification } from "../model";
+import { Chat, Notification, User } from "../model";
 import { IChatProps } from "../interface/chat.interface";
 import mongoose from "mongoose";
 
@@ -26,15 +27,73 @@ const io = new Server(server, {
 
 // Store mentor socket connections
 const mentorSockets = new Map<string, string>(); // mentorId -> socketId
+// Store user socket connections
+const userSockets = new Map<string, string>(); // userId -> socketId
 
 // ! ABLY When a client connects
 io.on("connection", (socket) => {
+  console.log(`Socket connected: ${socket.id}`);
+  
   // Listen for mentor registration
   socket.on("registerMentor", (data) => {
     const { mentorId } = data;
     if (mentorId) {
       mentorSockets.set(mentorId, socket.id);
       console.log(`Mentor ${mentorId} registered with socket ${socket.id}`);
+    }
+  });
+  
+  // Listen for user registration
+  socket.on("registerUser", async (data) => {
+    const { userId } = data;
+    if (userId) {
+      userSockets.set(userId, socket.id);
+      console.log(`User ${userId} registered with socket ${socket.id}`);
+      
+      // Update user online status in database
+      try {
+        const { User } = require("../model");
+        await User.findByIdAndUpdate(userId, { $set: { online: true } });
+        console.log(`User ${userId} status updated to online`);
+      } catch (error) {
+        console.error(`Error updating user ${userId} online status:`, error);
+      }
+    }
+  });
+  
+  // Listen for manual status updates
+  socket.on("updateStatus", async (data) => {
+    const { userId, status } = data;
+    if (userId && typeof status === 'boolean') {
+      console.log(`Manual status update for user ${userId}: ${status ? 'online' : 'offline'}`);
+      
+      try {
+        const { User } = require("../model");
+        await User.findByIdAndUpdate(userId, { $set: { online: status } });
+        console.log(`User ${userId} status manually updated to ${status ? 'online' : 'offline'}`);
+      } catch (error) {
+        console.error(`Error updating user ${userId} status:`, error);
+      }
+    }
+  });
+
+  // Listen for user registration to track online status
+  socket.on("registerUser", async (data) => {
+    console.log('🔌 registerUser event received:', data);
+    const { userId } = data;
+    if (userId) {
+      userSockets.set(userId, socket.id);
+      console.log(`User ${userId} connected with socket ${socket.id}`);
+      
+      // Update user online status in database
+      try {
+        await User.findByIdAndUpdate(userId, { $set: { online: true } });
+        console.log(`User ${userId} status updated to online`);
+      } catch (error) {
+        console.error(`Error updating user ${userId} online status:`, error);
+      }
+    } else {
+      console.log('❌ No userId provided in registerUser event');
     }
   });
 
@@ -114,8 +173,10 @@ io.on("connection", (socket) => {
   });
 
   // When the client disconnects
-  socket.on("disconnect", () => {
-    // Remove mentor from registered sockets
+  socket.on("disconnect", async () => {
+    console.log("🔌 Socket disconnect event triggered for socket:", socket.id);
+    
+    // Remove mentor socket if exists
     for (const [mentorId, socketId] of mentorSockets.entries()) {
       if (socketId === socket.id) {
         mentorSockets.delete(mentorId);
@@ -123,7 +184,39 @@ io.on("connection", (socket) => {
         break;
       }
     }
-    console.log("user disconnected:", socket.id);
+    
+    // Remove user socket and update status if exists
+    for (const [userId, socketId] of userSockets.entries()) {
+      if (socketId === socket.id) {
+        userSockets.delete(userId);
+        console.log(`User ${userId} disconnected`);
+        
+        // Update user offline status in database
+        try {
+          await User.findByIdAndUpdate(userId, { $set: { online: false } });
+          console.log(`✅ User ${userId} status updated to offline in database`);
+        } catch (error) {
+          console.error(`❌ Error updating user ${userId} offline status:`, error);
+        }
+        break;
+      }
+    }
+  });
+
+  // Handle manual user status updates
+  socket.on("updateUserStatus", async (data) => {
+    console.log('🔄 updateUserStatus event received:', data);
+    const { userId, online } = data;
+    if (userId && typeof online === 'boolean') {
+      try {
+        await User.findByIdAndUpdate(userId, { $set: { online } });
+        console.log(`User ${userId} status manually updated to ${online ? 'online' : 'offline'}`);
+      } catch (error) {
+        console.error(`Error manually updating user ${userId} status:`, error);
+      }
+    } else {
+      console.log('❌ Invalid data for updateUserStatus:', { userId, online, typeOfOnline: typeof online });
+    }
   });
 });
 

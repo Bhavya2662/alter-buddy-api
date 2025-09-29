@@ -147,9 +147,44 @@ export class AuthenticationController implements IController {
       if (user.acType !== "USER") {
         return UnAuthorized(res, "access denied");
       }
+      
+      // Check if user account is deactivated (before block check for specific messages)
+      if (user.deactivation?.isDeactivated) {
+        const deactivationType = user.deactivation.type;
+        const reason = user.deactivation.reason || 'No reason provided';
+        
+        if (deactivationType === 'permanent') {
+          return UnAuthorized(res, `Your account has been permanently deactivated. Reason: ${reason}. Please contact support for assistance.`);
+        } else if (deactivationType === 'temporary') {
+          const reactivationDate = user.deactivation.reactivationDate;
+          if (reactivationDate && new Date() < reactivationDate) {
+            const reactivationDateStr = reactivationDate.toLocaleDateString();
+            return UnAuthorized(res, `Your account is temporarily suspended until ${reactivationDateStr}. Reason: ${reason}. Please contact support if you believe this is an error.`);
+          } else {
+            // Temporary suspension has expired, automatically reactivate
+            await User.findByIdAndUpdate(
+              user._id,
+              { 
+                $set: { 
+                  'deactivation.isDeactivated': false,
+                  'deactivation.markedForDeletion': false,
+                  block: false
+                },
+                $unset: {
+                  'deactivation.reactivationDate': '',
+                  'deactivation.deletionScheduledAt': ''
+                }
+              }
+            );
+          }
+        }
+      }
+      
+      // Check if user is blocked (after deactivation check)
       if (user.block) {
         return UnAuthorized(res, "your account has been blocked by admin");
       }
+      
       if (!bcrypt.compareSync(password, user.password)) {
         return UnAuthorized(res, "wrong password");
       }
@@ -175,14 +210,18 @@ export class AuthenticationController implements IController {
 
   public async UserSignUp(req: Request, res: Response) {
     try {
+      console.log('=== UserSignUp method called ===');
+      console.log('Request body:', req.body);
       const { emails, password, name, mobiles }: {
         emails: string[];
         password: string;
         name: { firstName: string; lastName: string };
         mobiles: string[];
       } = req.body;
+      console.log('Extracted fields:', { emails, password: password ? 'present' : 'missing', name, mobiles });
 
       if (!emails || !password || !mobiles || !name) {
+        console.log('Missing fields detected:', { emails: !!emails, password: !!password, mobiles: !!mobiles, name: !!name });
         return UnAuthorized(res, "missing fields");
       }
 
