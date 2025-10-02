@@ -10,8 +10,9 @@ export interface ISessionPackage extends Document {
   remainingSessions: number;
   price: number;
   duration?: number; // Optional session duration in minutes
-  status: "active" | "expired" | "template";
+  status: "active" | "expired" | "template" | "chat_support_active";
   expiryDate?: Date;
+  chatSupportExpiresAt?: Date;
 }
 
 const SessionPackageSchema: Schema<ISessionPackage> = new Schema(
@@ -24,8 +25,9 @@ const SessionPackageSchema: Schema<ISessionPackage> = new Schema(
     remainingSessions: { type: Number, required: true },
     price: { type: Number, required: true },
     duration: { type: Number, required: false }, // Optional session duration in minutes
-    status: { type: String, enum: ["active", "expired", "template"], default: "active" },
+    status: { type: String, enum: ["active", "expired", "template", "chat_support_active"], default: "active" },
     expiryDate: { type: Date, required: false }, // Optional expiry date
+    chatSupportExpiresAt: { type: Date, required: false }, // Chat support expiry date
   },
   { timestamps: true }
 );

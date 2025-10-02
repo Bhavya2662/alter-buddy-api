@@ -45,6 +45,12 @@ export class SessionPackageController implements IController {
         handler: this.DeletePackage,
         middleware: [AuthForMentor],
       },
+      {
+        path: "/session/packages/all",
+        method: "GET",
+        handler: this.GetAllTemplatePackages,
+        middleware: [AuthForUser],
+      },
     ];
   }
 
@@ -177,6 +183,33 @@ export class SessionPackageController implements IController {
       if (!deleted) return UnAuthorized(res, "Package not found");
 
       return Ok(res, { message: "Deleted successfully" });
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async GetAllTemplatePackages(req: Request, res: Response) {
+    try {
+      const { categoryId, type } = req.query;
+      
+      const filter: any = {
+        status: "template"
+      };
+      
+      // Add optional filters
+      if (categoryId) {
+        filter.categoryId = categoryId;
+      }
+      if (type && ["chat", "audio", "video"].includes(type as string)) {
+        filter.type = type;
+      }
+      
+      const packages = await SessionPackage.find(filter)
+        .populate("mentorId", "name category")
+        .populate("categoryId", "title")
+        .sort({ createdAt: -1 });
+      
+      return Ok(res, packages);
     } catch (err) {
       return UnAuthorized(res, err);
     }

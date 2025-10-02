@@ -12,12 +12,13 @@
   "REACT_APP_100MD_SDK_TOKEN": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTU1MTQyOTksImV4cCI6MTc1NjExOTA5OSwianRpIjoiZGE5ZjcyYjAtOGE1Zi00NDcxLWExNDYtY2VjZWYwOTNlZGFlIiwidHlwZSI6Im1hbmFnZW1lbnQiLCJ2ZXJzaW9uIjoyLCJuYmYiOjE3NTU1MTQyOTksImFjY2Vzc19rZXkiOiI2NmEwOTZjZmFkZDEyNjUxYTAyZjhiNjAifQ.NFwBrEIvlPCVXKPzADLmst4O_MsNo-FVIZq-TEzB4Eg",
   "REACT_APP_100MD_SDK_VIDEO_TEMPLATE": "66a096efad8abf3a324d273a",
   "REACT_APP_100MD_SDK_AUDIO_TEMPLATE": "66a096efad8abf3a324d273a",
-  "FRONTEND_URL": "https://alter-buddy-frontend-g4gexm8vo-bhavyas-projects-76b90fb1.vercel.app",
+  "FRONTEND_URL": "https://alter-buddy-frontend.vercel.app",
   "ADMIN_API_KEY": "admin-webhook-key-123",
   "SMTP_HOST": "smtp.gmail.com",
   "SMTP_USER": "alterbuddy8@gmail.com",
-  "SMTP_PASS": "your-app-password",
+  "SMTP_PASS": "REPLACE_WITH_GMAIL_APP_PASSWORD",
+  "_SMTP_SETUP_INSTRUCTIONS": "To fix email functionality: 1. Go to Google Account settings, 2. Enable 2FA, 3. Generate App Password for Gmail, 4. Replace SMTP_PASS value above with the generated app password",
   "SMTP_FROM": "alterbuddy8@gmail.com",
-  "CORS_ORIGIN": "https://alter-buddy-frontend-g4gexm8vo-bhavyas-projects-76b90fb1.vercel.app",
+  "CORS_ORIGIN": "https://alter-buddy-frontend.vercel.app",
   "BACKEND_URL": "https://alter-buddy-api.onrender.com"
 }

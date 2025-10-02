@@ -4,7 +4,7 @@ const config = require('config');
 // Configuration
 const API_BASE_URL = 'http://localhost:8080/api/1.0';
 const USER_ID = '68a2ffa2e50fb244ba4905dd';
-const MENTOR_ID = '681ce7a1c4222eb69ca553fe';
+const MENTOR_ID = '68a37ad37de01f8431c91ee3';
 
 async function testChatRoomRedirect() {
   try {

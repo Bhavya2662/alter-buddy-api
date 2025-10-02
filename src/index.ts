@@ -4,11 +4,12 @@ import mongoose from "mongoose";
 import cors from "cors";
 import morgan from "morgan";
 import { errorHandler, notFoundMiddleware } from "./middleware";
+import { corsOptions, securityHeaders, generalLimiter } from "./middleware/security.middleware";
 import { registerRoutesV1 } from "./api";
 import cookieParser from "cookie-parser";
 import config from "config";
 import { CronService } from "./services/cron.service";
-// import "./utils/cron.utils";
+import { initializeCronJobs } from "./utils/cron.utils";
 
 class App {
   express: Express;
@@ -39,16 +40,14 @@ class App {
     // Remove hardcoded port setting - let Railway handle PORT via environment variable
     this.express.use(cookieParser());
     this.express.use(morgan("dev"));
-    // CORS configuration - Allow all origins for now to fix immediate issue
-    this.express.use(
-      cors({
-        origin: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-        credentials: true,
-        optionsSuccessStatus: 200
-      })
-    );
+    // Security headers
+    this.express.use(securityHeaders);
+    
+    // Rate limiting
+    this.express.use(generalLimiter);
+    
+    // CORS configuration with proper origin validation
+    this.express.use(cors(corsOptions));
     // this.express.use(createClient({}));
   }
 
@@ -81,6 +80,7 @@ class App {
 
   private initializeCronJobs(): void {
     CronService.initializeCronJobs();
+    initializeCronJobs(); // Initialize package session cron jobs
   }
 }
 

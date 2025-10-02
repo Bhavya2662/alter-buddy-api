@@ -49,6 +49,12 @@ export class WebsiteController implements IController {
       path: "/website/deactivated-users",
       middleware: [AuthForAdmin],
     });
+    this.routes.push({
+      handler: this.BlockUserById,
+      method: "PUT",
+      path: "/website/users/:id/block",
+      middleware: [AuthForAdmin],
+    });
   }
 
   public async GetAllCalls(req: Request, res: Response) {
@@ -207,6 +213,40 @@ export class WebsiteController implements IController {
       }).sort({ 'deactivation.deactivatedAt': -1 });
       
       return Ok(res, deactivatedUsers);
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async BlockUserById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      
+      const user = await User.findById(id);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      if (user.acType === 'ADMIN') {
+        return UnAuthorized(res, "Cannot block admin accounts");
+      }
+
+      const isCurrentlyBlocked = user.block || false;
+      const updatedUser = await User.findByIdAndUpdate(
+        id,
+        { 
+          $set: { 
+            block: !isCurrentlyBlocked,
+            online: isCurrentlyBlocked ? user.online : false // Set offline when blocking
+          } 
+        },
+        { new: true }
+      );
+
+      return Ok(res, {
+        message: `User ${!isCurrentlyBlocked ? 'blocked' : 'unblocked'} successfully`,
+        user: updatedUser
+      });
     } catch (err) {
       return UnAuthorized(res, err);
     }

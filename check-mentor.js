@@ -24,7 +24,7 @@ const UserSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', UserSchema);
 
-const TEST_MENTOR_ID = '6893af3764b3ae9ab7485a0e';
+const TEST_MENTOR_ID = '68a37ad37de01f8431c91ee3';
 
 async function checkMentor() {
   try {
@@ -34,6 +34,14 @@ async function checkMentor() {
     
     if (!mentor) {
       console.log('❌ Mentor not found in database');
+      
+      // Check all mentors in the database
+      const allMentors = await User.find({ acType: 'MENTOR' });
+      console.log(`\nFound ${allMentors.length} mentors in database:`);
+      allMentors.forEach((m, index) => {
+        console.log(`${index + 1}. ${m.name?.firstName} ${m.name?.lastName} (${m.email}) - ID: ${m._id}`);
+      });
+      
       process.exit(1);
     }
     

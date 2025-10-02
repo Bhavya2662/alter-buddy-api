@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const API_BASE = 'http://localhost:8080/api/1.0';
-const JWT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTNhZjM3NjRiM2FlOWFiNzQ4NWEwZCIsImlhdCI6MTc1NTUxMjcyMSwiZXhwIjoxNzU4MTA0NzIxfQ.w-58WVOcaY4r94sDZh0CHXhWFI0UKvnd24QyPkbSjWk';
+const JWT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmZmEyZTUwZmIyNDRiYTQ5MDVkZCIsImlhdCI6MTc1OTM4OTAzNiwiZXhwIjoxNzYxOTgxMDM2fQ.Cm9TBdIVeHNoorPBxt2IS8KDQ1OsInUHB8iJW1GwspM';
 
 const headers = {
   'Authorization': `Bearer ${JWT_TOKEN}`,

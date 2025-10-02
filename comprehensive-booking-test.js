@@ -1,8 +1,8 @@
 const axios = require('axios');
 
 const API_BASE = 'http://localhost:8080/api/1.0';
-const JWT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmZmEyZTUwZmIyNDRiYTQ5MDVkZCIsImlhdCI6MTc1NTU0MjIwNSwiZXhwIjoxNzU4MTM0MjA1fQ.E6O7D3uR7o5Fu1NIOcQ7JUkR7708XFCR24mak28fYXI'; // Fresh token from testuser@example.com
-const MENTOR_ID = '681ce7a1c4222eb69ca553fe'; // Valid mentor ID: Sachi Shah
+const JWT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmZmEyZTUwZmIyNDRiYTQ5MDVkZCIsImlhdCI6MTc1OTM5MDUxNywiZXhwIjoxNzYxOTgyNTE3fQ.lk5_fA1gBHTpth10urr76ePy-Or2aqx216oqhaTPaHw'; // Fresh token from testuser@example.com
+const MENTOR_ID = '68a37ad37de01f8431c91ee3'; // Valid mentor ID: Sachi Shah
 const USER_ID = '68a2ffa2e50fb244ba4905dd'; // Test user with wallet
 
 const headers = {

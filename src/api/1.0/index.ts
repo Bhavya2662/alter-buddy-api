@@ -5,8 +5,10 @@ import {
   BlogController,
   CallController,
   CategoryController,
+  ChatSupportController,
   EmailController,
   FeaturesController,
+  GeneralController,
   GroupSessionController,
   HomeController,
   MentorCallSchedule,
@@ -71,4 +73,6 @@ export const registerRoutesV1 = (express: Express) => {
   routesHandler(express, new PackagesController());
   routesHandler(express, new CallController());
   routesHandler(express, new EmailController());
+  routesHandler(express, new ChatSupportController());
+  routesHandler(express, new GeneralController());
 };

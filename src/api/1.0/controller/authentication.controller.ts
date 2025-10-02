@@ -107,6 +107,23 @@ export class AuthenticationController implements IController {
       method: "POST",
       path: "/user/resend-otp",
     });
+    // Add auth routes for frontend compatibility
+    this.routes.push({
+      handler: this.UserForgotPassword,
+      method: "POST",
+      path: "/auth/forgot-password",
+    });
+    this.routes.push({
+      handler: this.ValidateResetToken,
+      method: "POST",
+      path: "/auth/validate-password",
+    });
+    this.routes.push({
+      handler: this.ChangePassword,
+      method: "PUT",
+      path: "/auth/change-password",
+      middleware: [AuthForUser],
+    });
     this.routes.push({
       handler: this.DeactivateUserAccount,
       method: "PUT",
@@ -1061,6 +1078,47 @@ export class AuthenticationController implements IController {
         user: result,
       });
     } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async ChangePassword(req: Request, res: Response) {
+    try {
+      const token = getTokenFromHeader(req);
+      const verified = verifyToken(token);
+
+      if (!verified) {
+        return UnAuthorized(res, "Invalid token");
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return UnAuthorized(res, "Current password and new password are required");
+      }
+
+      const user = await User.findById(verified.id);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return UnAuthorized(res, "Current password is incorrect");
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await User.findByIdAndUpdate(user._id, {
+        password: hashedNewPassword,
+      });
+
+      return Ok(res, "Password changed successfully");
+    } catch (err) {
+      console.log(err);
       return UnAuthorized(res, err);
     }
   }

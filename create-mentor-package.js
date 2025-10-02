@@ -50,7 +50,7 @@ async function createMentorPackage() {
     }
 
     // Find the mentor with ID from our previous tests
-    const mentorId = '681ce7a1c4222eb69ca553fe'; // Sachi Shah
+    const mentorId = '68a37ad37de01f8431c91ee3'; // Test Mentor
     
     // Create packages for all call types
     const packageTypes = [

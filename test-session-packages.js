@@ -2,7 +2,7 @@ const axios = require('axios');
 
 // Configuration
 const API_BASE = 'http://localhost:8080/api/1.0';
-const JWT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmZmEyZTUwZmIyNDRiYTQ5MDVkZCIsImlhdCI6MTc1NjQ4NjgyOSwiZXhwIjoxNzU5MDc4ODI5fQ.jT8zW9wHPG4-VUngybL7zP7wVpB-ibQYDgIAJjPkP8s';
+const JWT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmZmEyZTUwZmIyNDRiYTQ5MDVkZCIsImlhdCI6MTc1OTM4OTAzNiwiZXhwIjoxNzYxOTgxMDM2fQ.Cm9TBdIVeHNoorPBxt2IS8KDQ1OsInUHB8iJW1GwspM';
 const USER_ID = '68a2ffa2e50fb244ba4905dd';
 const MENTOR_ID = '68a2ffa2e50fb244ba4905dd'; // Using same ID for testing
 const CATEGORY_ID = '686f93490ad64a94f5156280'; // Using existing category

@@ -17,3 +17,5 @@ export * from "./rant.controller";
 export * from "./packages.controller";
 export * from "./call.controller";
 export * from "./email.controller";
+export * from "./chat-support.controller";
+export * from "./general.controller";

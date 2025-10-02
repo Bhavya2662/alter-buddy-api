@@ -92,7 +92,7 @@ async function addUserWalletBalance() {
     console.log('💰 Adding wallet balance to user...');
     
     // Find user
-    const user = await User.findOne({ email: 'bhavyasharma2662@gmail.com' });
+    const user = await User.findOne({ email: 'testuser@example.com' });
     if (!user) {
       console.log('❌ User not found');
       return;

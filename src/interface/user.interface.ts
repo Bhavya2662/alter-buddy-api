@@ -35,4 +35,4 @@ export interface IUserProps {
   };
 }
 
-export type UserAccountType = "USER" | "ADMIN";
+export type UserAccountType = "USER" | "ADMIN" | "MENTOR";

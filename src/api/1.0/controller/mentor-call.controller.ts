@@ -352,9 +352,11 @@ export class MentorCallSchedule implements IController {
 
       console.log('Looking for user and mentor...');
       const user = await User.findById(userId).lean();
-      const mentor = await Mentor.findById(mentorId).lean();
+      // Look for mentor in User collection with acType 'MENTOR'
+      const mentor = await User.findById(mentorId).lean();
       console.log('User found:', !!user, 'Mentor found:', !!mentor);
-      if (!user || !mentor) {
+      console.log('Mentor acType:', mentor?.acType);
+      if (!user || !mentor || mentor.acType !== 'MENTOR') {
         console.log('User or mentor not found - returning 401');
         return UnAuthorized(res, "User or Mentor not found.");
       }
@@ -397,7 +399,9 @@ export class MentorCallSchedule implements IController {
         if (sessionPackage.remainingSessions === 0) {
           sessionPackage.status = 'expired';
         }
-        await sessionPackage.save();
+        
+        console.log('DEBUG: Used session from package, remaining:', sessionPackage.remainingSessions, 'isLastSession:', isLastSession);
+        console.log('DEBUG: Execution continuing after package usage log...');
         
         if (isLastSession) {
           // Last session: Apply normal charging logic
@@ -615,7 +619,9 @@ export class MentorCallSchedule implements IController {
              };
             
             // Send email asynchronously without waiting
-            sendSupportEmail();
+            sendSupportEmail().catch(error => {
+              console.error('Unhandled error in sendSupportEmail:', error);
+            });
             
           } catch (supportError) {
             console.error('Failed to create 1-week chat support:', supportError);
@@ -628,7 +634,15 @@ export class MentorCallSchedule implements IController {
           paymentMethod = 'package';
         }
         
-        console.log('DEBUG: Used session from package, remaining:', sessionPackage.remainingSessions, 'isLastSession:', isLastSession);
+        // Save the updated session package
+        try {
+          console.log('DEBUG: About to save session package...');
+          await sessionPackage.save();
+          console.log('DEBUG: Package saved successfully, proceeding to room creation');
+        } catch (saveError) {
+          console.log('DEBUG: Error saving session package:', saveError);
+          return UnAuthorized(res, 'Failed to update session package');
+        }
       } else {
         // Regular wallet-based payment
         console.log('DEBUG: Looking for regular package with:', { packageType: callType, mentorId: mentor._id });
@@ -681,6 +695,7 @@ export class MentorCallSchedule implements IController {
          });
       }
 
+      console.log("DEBUG: Finished payment processing, proceeding to slot booking...");
       if (type === "slot") {
         await CallSchedule.updateOne(
           { slots: { $elemMatch: { _id: slotId } } },
@@ -700,7 +715,14 @@ export class MentorCallSchedule implements IController {
       let guestJoinURL: string | undefined;
       let roomId: string = generateRandomRoomId();
 
+      console.log("DEBUG: About to start room creation process for callType:", callType);
       if (callType === "audio" || callType === "video") {
+        console.log("=== 100MS API DEBUG START ===");
+        console.log("Creating room for callType:", callType);
+        console.log("Template ID:", callType === "video" ? process.env.REACT_APP_100MD_SDK_VIDEO_TEMPLATE : process.env.REACT_APP_100MD_SDK_AUDIO_TEMPLATE);
+        console.log("Token present:", !!process.env.REACT_APP_100MD_SDK_TOKEN);
+        console.log("About to make 100ms API call...");
+        
         const roomResponse = await axios.post(
           "https://api.100ms.live/v2/rooms",
           {
@@ -718,6 +740,9 @@ export class MentorCallSchedule implements IController {
             },
           }
         );
+        
+        console.log("Room created successfully:", roomResponse.data.id);
+        console.log("=== 100MS API DEBUG END ===");
 
         roomId = roomResponse.data.id || roomId;
 
@@ -913,7 +938,7 @@ export class MentorCallSchedule implements IController {
             // --- Send Email to MENTOR ---
             const mentorMailOptions = {
               from: process.env.SMTP_FROM,
-              to: mentor.contact.email,
+              to: mentor.email,
               subject: "New Mentorship Session Booked!",
               html: `
                 <!DOCTYPE html>
@@ -1012,6 +1037,11 @@ export class MentorCallSchedule implements IController {
         }
       });
     } catch (err) {
+      console.error("=== BOOKING ERROR DEBUG START ===");
+      console.error("Error in BookSlotByUserId:", err);
+      console.error("Error message:", err instanceof Error ? err.message : "Unknown error");
+      console.error("Error stack:", err instanceof Error ? err.stack : "No stack trace");
+      console.error("=== BOOKING ERROR DEBUG END ===");
       return UnAuthorized(
         res,
         err instanceof Error ? err.message : "Unknown error occurred."

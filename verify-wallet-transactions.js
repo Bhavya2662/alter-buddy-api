@@ -62,7 +62,7 @@ async function verifyWalletTransactions() {
     console.log('==================================================');
     
     const userId = '68a2ffa2e50fb244ba4905dd';
-    const mentorId = '681ce7a1c4222eb69ca553fe';
+    const mentorId = '68a37ad37de01f8431c91ee3';
     
     // Check user wallet
     console.log('\n👤 USER WALLET ANALYSIS:');

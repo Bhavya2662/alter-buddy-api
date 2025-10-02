@@ -1,0 +1,75 @@
+{
+  "timestamp": "2025-10-02T09:43:43.189Z",
+  "summary": {
+    "passed": 10,
+    "failed": 0,
+    "total": 10,
+    "successRate": "100.0%"
+  },
+  "realIds": {
+    "userId": "6893af3764b3ae9ab7485a0d",
+    "mentorId": "68a37ad37de01f8431c91ee3"
+  },
+  "testDetails": [
+    {
+      "testName": "User Login",
+      "success": true,
+      "message": "Successfully logged in and received token",
+      "timestamp": "2025-10-02T09:43:42.554Z"
+    },
+    {
+      "testName": "Mentor Login",
+      "success": true,
+      "message": "Successfully logged in and received token",
+      "timestamp": "2025-10-02T09:43:42.664Z"
+    },
+    {
+      "testName": "100ms Token",
+      "success": true,
+      "message": "Room created with ID: 62dcdea2-d32d-4e46-8854-c79ff95a4ee1",
+      "timestamp": "2025-10-02T09:43:42.690Z"
+    },
+    {
+      "testName": "User Profile",
+      "success": true,
+      "message": "Successfully accessed user profile",
+      "timestamp": "2025-10-02T09:43:42.737Z"
+    },
+    {
+      "testName": "Mentor Profile",
+      "success": true,
+      "message": "Successfully accessed mentor profile",
+      "timestamp": "2025-10-02T09:43:42.786Z"
+    },
+    {
+      "testName": "Instant Chat Booking",
+      "success": true,
+      "message": "Business logic handled correctly - insufficient balance: Insufficient balance.",
+      "timestamp": "2025-10-02T09:43:42.903Z"
+    },
+    {
+      "testName": "Instant Audio Booking",
+      "success": true,
+      "message": "Business logic handled correctly - insufficient balance: Insufficient balance.",
+      "timestamp": "2025-10-02T09:43:43.016Z"
+    },
+    {
+      "testName": "Instant Video Booking",
+      "success": true,
+      "message": "Business logic handled correctly - insufficient balance: Insufficient balance.",
+      "timestamp": "2025-10-02T09:43:43.129Z"
+    },
+    {
+      "testName": "Booking Validation",
+      "success": true,
+      "message": "Invalid mentor ID properly rejected",
+      "timestamp": "2025-10-02T09:43:43.187Z"
+    },
+    {
+      "testName": "Unauthorized Access",
+      "success": true,
+      "message": "Unauthorized access blocked with status 400",
+      "timestamp": "2025-10-02T09:43:43.189Z"
+    }
+  ]
+}

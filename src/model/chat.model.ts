@@ -59,14 +59,14 @@ const ChatSchema = new mongoose.Schema<IChatProps>(
       type: mongoose.Schema.Types.String,
       required: false,
     },
+    isChatSupport: {
+      type: mongoose.Schema.Types.Boolean,
+      default: false,
+      required: false,
+    },
     packageId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SessionPackage",
-      required: false,
-    },
-    isSupportSession: {
-      type: mongoose.Schema.Types.Boolean,
-      default: false,
       required: false,
     },
     supportExpiryDate: {
