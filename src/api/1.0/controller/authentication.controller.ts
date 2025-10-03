@@ -49,6 +49,12 @@ export class AuthenticationController implements IController {
       middleware: [AuthForAdmin],
     });
     this.routes.push({
+      path: "/mentor/:id/status",
+      handler: this.UpdateMentorStatus,
+      method: "PATCH",
+      middleware: [AuthForAdmin],
+    });
+    this.routes.push({
       path: "/mentor/update/:id",
       handler: this.UpdateMentor,
       method: "PUT",
@@ -615,15 +621,82 @@ export class AuthenticationController implements IController {
       console.log(verified);
       console.log('====================================');
       if (verified.id) {
-        const mentor = await Mentor.findByIdAndUpdate({ _id: id }, req.body);
-        return Ok(res, mentor);
+        const updatedMentor = await Mentor.findByIdAndUpdate({ _id: id }, req.body, { new: true });
+        
+        // Emit real-time update to all connected clients
+        const { io } = require('../../../bin/www');
+        if (io) {
+          io.emit('mentorStatusUpdated', {
+            mentorId: id,
+            accountStatus: updatedMentor.accountStatus,
+            inCall: updatedMentor.inCall,
+            isUnavailable: updatedMentor.isUnavailable,
+            status: updatedMentor.status
+          });
+        }
+        
+        return Ok(res, "Mentor updated successfully");
       } else {
         return UnAuthorized(res, "access denied & invalid token");
       }
-      return Ok(res, "Mentor updated successfully");
     } catch (err) {
       console.log(err);
       
+      return UnAuthorized(res, err);
+    }
+  };
+
+  public UpdateMentorStatus = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { online, inCall, isUnavailable } = req.body;
+      
+      // No need for additional token verification since AuthForAdmin middleware handles it
+
+      const updateData: any = {};
+      if (typeof online === 'boolean') {
+        updateData['accountStatus.online'] = online;
+      }
+      if (typeof inCall === 'boolean') {
+        updateData.inCall = inCall;
+      }
+      if (typeof isUnavailable === 'boolean') {
+        updateData.isUnavailable = isUnavailable;
+      }
+
+      const updatedMentor = await Mentor.findByIdAndUpdate(
+        id, 
+        { $set: updateData }, 
+        { new: true }
+      );
+
+      if (!updatedMentor) {
+        return UnAuthorized(res, "Mentor not found");
+      }
+
+      // Emit real-time update to all connected clients
+      const { io } = require('../../../bin/www');
+      if (io) {
+        io.emit('mentorStatusUpdated', {
+          mentorId: id,
+          accountStatus: updatedMentor.accountStatus,
+          inCall: updatedMentor.inCall,
+          isUnavailable: updatedMentor.isUnavailable,
+          status: updatedMentor.status
+        });
+      }
+
+      return Ok(res, {
+        message: "Mentor status updated successfully",
+        mentor: {
+          _id: updatedMentor._id,
+          accountStatus: updatedMentor.accountStatus,
+          inCall: updatedMentor.inCall,
+          isUnavailable: updatedMentor.isUnavailable
+        }
+      });
+    } catch (err) {
+      console.log(err);
       return UnAuthorized(res, err);
     }
   };

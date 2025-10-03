@@ -14,7 +14,7 @@ console.log(`server enabled on port ${port} (Railway deployment)`);
 
 export const server = http.createServer(app);
 
-const io = new Server(server, {
+export const io = new Server(server, {
   path: '/socket.io/',
   cors: {
     origin: true,
@@ -35,11 +35,27 @@ io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.id}`);
   
   // Listen for mentor registration
-  socket.on("registerMentor", (data) => {
+  socket.on("registerMentor", async (data) => {
     const { mentorId } = data;
     if (mentorId) {
       mentorSockets.set(mentorId, socket.id);
       console.log(`Mentor ${mentorId} registered with socket ${socket.id}`);
+      
+      // Update mentor online status in database
+      try {
+        const { Mentor } = require("../model");
+        await Mentor.findByIdAndUpdate(mentorId, { $set: { "accountStatus.online": true } });
+        console.log(`Mentor ${mentorId} status updated to online`);
+        
+        // Broadcast mentor online status to all clients
+        io.emit('mentorStatusUpdated', {
+          mentorId,
+          accountStatus: { online: true },
+          timestamp: new Date()
+        });
+      } catch (error) {
+        console.error(`Error updating mentor ${mentorId} online status:`, error);
+      }
     }
   });
   
@@ -181,6 +197,22 @@ io.on("connection", (socket) => {
       if (socketId === socket.id) {
         mentorSockets.delete(mentorId);
         console.log(`Mentor ${mentorId} disconnected`);
+        
+        // Update mentor offline status in database
+        try {
+          const { Mentor } = require("../model");
+          await Mentor.findByIdAndUpdate(mentorId, { $set: { "accountStatus.online": false } });
+          console.log(`Mentor ${mentorId} status updated to offline`);
+          
+          // Broadcast mentor offline status to all clients
+          io.emit('mentorStatusUpdated', {
+            mentorId,
+            accountStatus: { online: false },
+            timestamp: new Date()
+          });
+        } catch (error) {
+          console.error(`Error updating mentor ${mentorId} offline status:`, error);
+        }
         break;
       }
     }
