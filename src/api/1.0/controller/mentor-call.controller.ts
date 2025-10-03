@@ -352,11 +352,11 @@ export class MentorCallSchedule implements IController {
 
       console.log('Looking for user and mentor...');
       const user = await User.findById(userId).lean();
-      // Look for mentor in User collection with acType 'MENTOR'
-      const mentor = await User.findById(mentorId).lean();
+      // Look for mentor in Mentor collection
+      const mentor = await Mentor.findById(mentorId).lean();
       console.log('User found:', !!user, 'Mentor found:', !!mentor);
       console.log('Mentor acType:', mentor?.acType);
-      if (!user || !mentor || mentor.acType !== 'MENTOR') {
+      if (!user || !mentor) {
         console.log('User or mentor not found - returning 401');
         return UnAuthorized(res, "User or Mentor not found.");
       }
@@ -660,11 +660,33 @@ export class MentorCallSchedule implements IController {
           return UnAuthorized(res, "Package or Wallet not found.");
         }
 
-        totalCost = packages.price * parseInt(time);
+        // Check for first-time pricing (1 rupee for first chat session, regardless of duration)
+        let isFirstTimeUser = false;
+        if (callType === 'chat') {
+          // Check for any previous debit transactions (indicating previous bookings)
+          const existingTransactions = await Transaction.countDocuments({
+            userId: userId,
+            debitAmt: { $gt: 0 },
+            status: 'success'
+          });
+          
+          console.log('DEBUG: Existing debit transactions for user:', existingTransactions);
+          isFirstTimeUser = existingTransactions === 0;
+        }
+
+        if (isFirstTimeUser) {
+          totalCost = 1; // 1 rupee for first-time chat users (5 minutes or less)
+          console.log('DEBUG: Applied first-time pricing: 1 rupee');
+        } else {
+          totalCost = packages.price * parseInt(time);
+          console.log('DEBUG: Applied regular pricing:', totalCost);
+        }
         const slotBalance = userWallet.balance - totalCost;
         if (slotBalance < 0) {
           return UnAuthorized(res, "Insufficient balance.");
         }
+        
+        console.log('DEBUG: Payment calculation - Cost:', totalCost, 'Balance after:', slotBalance, 'First-time user:', isFirstTimeUser);
 
         // Update wallet balance and create transaction record
         await BuddyCoins.updateOne({ userId }, { balance: slotBalance });
@@ -938,7 +960,7 @@ export class MentorCallSchedule implements IController {
             // --- Send Email to MENTOR ---
             const mentorMailOptions = {
               from: process.env.SMTP_FROM,
-              to: mentor.email,
+              to: mentor.contact.email,
               subject: "New Mentorship Session Booked!",
               html: `
                 <!DOCTYPE html>
