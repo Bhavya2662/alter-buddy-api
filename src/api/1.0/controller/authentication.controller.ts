@@ -179,27 +179,22 @@ export class AuthenticationController implements IController {
         if (deactivationType === 'permanent') {
           return UnAuthorized(res, `Your account has been permanently deactivated. Reason: ${reason}. Please contact support for assistance.`);
         } else if (deactivationType === 'temporary') {
-          const reactivationDate = user.deactivation.reactivationDate;
-          if (reactivationDate && new Date() < reactivationDate) {
-            const reactivationDateStr = reactivationDate.toLocaleDateString();
-            return UnAuthorized(res, `Your account is temporarily suspended until ${reactivationDateStr}. Reason: ${reason}. Please contact support if you believe this is an error.`);
-          } else {
-            // Temporary suspension has expired, automatically reactivate
-            await User.findByIdAndUpdate(
-              user._id,
-              { 
-                $set: { 
-                  'deactivation.isDeactivated': false,
-                  'deactivation.markedForDeletion': false,
-                  block: false
-                },
-                $unset: {
-                  'deactivation.reactivationDate': '',
-                  'deactivation.deletionScheduledAt': ''
-                }
+          // For temporary deactivation, allow user to login anytime and automatically reactivate
+          await User.findByIdAndUpdate(
+            user._id,
+            { 
+              $set: { 
+                'deactivation.isDeactivated': false,
+                'deactivation.markedForDeletion': false,
+                block: false
+              },
+              $unset: {
+                'deactivation.reactivationDate': '',
+                'deactivation.deletionScheduledAt': ''
               }
-            );
-          }
+            }
+          );
+          // Continue with normal login process
         }
       }
       

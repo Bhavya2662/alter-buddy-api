@@ -14,6 +14,7 @@ import {
   verifyToken,
 } from "../../../utils";
 import bcrypt from "bcrypt";
+import { DeactivationService } from "../../../services/deactivation.service";
 
 export class AccountController implements IController {
   public routes: IControllerRoutes[] = [];
@@ -203,29 +204,30 @@ export class AccountController implements IController {
         return NotFound(res, "User not found");
       }
 
-      const { reason } = req.body;
+      const { reason, type = "temporary", reactivationDate } = req.body;
 
-      // Update user account to deactivated status
-      const updatedUser = await User.findByIdAndUpdate(
-        user._id,
-        { 
-          $set: { 
-            block: true,
-            deactivationReason: reason,
-            deactivatedAt: new Date()
-          } 
-        },
-        { new: true }
-      );
+      // Use DeactivationService to handle deactivation
+      let updatedUser;
+
+      if (type === "permanent") {
+        updatedUser = await DeactivationService.deactivatePermanently(user._id.toString(), reason);
+      } else {
+        updatedUser = await DeactivationService.deactivateTemporarily(
+          user._id.toString(), 
+          reason, 
+          reactivationDate ? new Date(reactivationDate) : undefined
+        );
+      }
 
       if (!updatedUser) {
         return UnAuthorized(res, "Failed to deactivate account");
       }
 
-      return Ok(
-        res,
-        "Your account has been deactivated successfully. We're sorry to see you go!"
-      );
+      const message = type === "temporary" 
+        ? "Your account has been temporarily deactivated. You can reactivate it anytime by logging in."
+        : "Your account has been permanently deactivated. You have 90 days to reactivate before deletion.";
+
+      return Ok(res, message);
     } catch (err) {
       console.log(err);
       return UnAuthorized(res, err);

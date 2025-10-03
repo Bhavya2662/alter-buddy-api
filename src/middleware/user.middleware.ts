@@ -14,53 +14,46 @@ export const AuthForUser = async (
   next: NextFunction
 ) => {
   try {
-    console.log('=== AUTH DEBUG START ===');
     const token = getTokenFromHeader(req);
-    console.log('Token extracted:', token ? 'Token present' : 'No token');
     
     if (!token) {
-      console.log('No token found in header');
       return BadRequest(res, "please login");
     }
 
-    console.log('Attempting to verify token...');
     const verified = verifyToken(token);
-    console.log('Token verified successfully:', verified);
-
-    console.log('Looking for user with ID:', verified.id);
     const user = await User.findOne({ _id: verified.id });
-    console.log('User found:', user ? 'Yes' : 'No');
 
     if (!user) {
-      console.log('User not found in database');
       return UnAuthorized(res, "user not found");
     }
 
-    console.log('User account type:', user.acType);
     if (user.acType !== "USER") {
-      console.log('Access denied - not a USER account');
       return UnAuthorized(res, "access_denied");
     }
 
-    console.log('Checking verified.id:', verified.id);
+    // Check if user is permanently deactivated (but allow deactivation endpoint access)
+    if (user.deactivation?.isDeactivated && user.deactivation?.type === 'permanent') {
+      // Allow access to deactivation/reactivation endpoints for account management
+      const isDeactivationEndpoint = req.path.includes('/deactivate') || req.path.includes('/reactivate');
+      if (!isDeactivationEndpoint) {
+        return UnAuthorized(res, "Your account has been permanently deactivated");
+      }
+    }
+    
+    // Temporarily deactivated users can access all endpoints (they auto-reactivate on login)
+    // No additional restrictions needed for temporary deactivation
+
     if (!verified.id) {
-      console.log('Failed to verify token - no ID');
       return BadRequest(res, "failed to verify token");
     }
 
-    console.log('Authentication successful, proceeding...');
     // Attach user info to request for use in controllers
     (req as any).user = {
       id: verified.id,
       userData: user
     };
-    console.log('=== AUTH DEBUG END ===');
     next();
   } catch (err) {
-    console.log('=== AUTH ERROR ===');
-    console.log('Authentication error:', err);
-    console.log('Error message:', err.message);
-    console.log('Error stack:', err.stack);
     return UnAuthorized(res, err);
   }
 };
