@@ -34,7 +34,7 @@ export class FeaturesController implements IController {
   }
   public async GetTopMentors(req: Request, res: Response) {
     try {
-      const mentors = await TopMentor.find()
+      const allTopMentors = await TopMentor.find()
         .sort({ createdAt: -1 })
         .populate({
           path: "mentorId",
@@ -42,7 +42,26 @@ export class FeaturesController implements IController {
             path: "category",
           },
         });
-      return Ok(res, mentors);
+      
+      // Filter top mentors with complete profiles only
+      const completeTopMentors = allTopMentors.filter(topMentor => {
+        const mentor = topMentor.mentorId as any; // Cast to handle populated object
+        return (
+          mentor &&
+          mentor.auth?.username &&
+          mentor.auth?.password &&
+          mentor.contact?.email &&
+          mentor.contact?.mobile &&
+          mentor.contact?.address &&
+          mentor.name?.firstName &&
+          mentor.name?.lastName &&
+          mentor.image &&
+          mentor.languages && mentor.languages.length > 0 &&
+          mentor.qualification && mentor.qualification.trim() !== ""
+        );
+      });
+      
+      return Ok(res, completeTopMentors);
     } catch (err) {
       return UnAuthorized(res, err);
     }

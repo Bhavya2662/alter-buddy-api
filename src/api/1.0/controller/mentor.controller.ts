@@ -27,11 +27,28 @@ export class MentorController implements IController {
 
   public async GetAllMentor(req: Request, res: Response) {
     try {
-      const mentor = await Mentor.find({ status: true })
+      const allMentors = await Mentor.find({ status: true })
         .sort({ createdAt: -1 })
         .populate("category")
         .sort({ createdAt: -1 });
-      return Ok(res, mentor);
+      
+      // Filter mentors with complete profiles only
+      const completeMentors = allMentors.filter(mentor => {
+        return (
+          mentor.auth?.username &&
+          mentor.auth?.password &&
+          mentor.contact?.email &&
+          mentor.contact?.mobile &&
+          mentor.contact?.address &&
+          mentor.name?.firstName &&
+          mentor.name?.lastName &&
+          mentor.image &&
+          mentor.languages && mentor.languages.length > 0 &&
+          mentor.qualification && mentor.qualification.trim() !== ""
+        );
+      });
+      
+      return Ok(res, completeMentors);
     } catch (err) {
       return UnAuthorized(res, err);
     }
@@ -40,10 +57,27 @@ export class MentorController implements IController {
   public async GetMentorBySubCategoryId(req: Request, res: Response) {
     try {
       const id = req.params.id;
-      const mentor = await Mentor.find({ subCategory: id })
+      const allMentors = await Mentor.find({ subCategory: id })
         .populate("category")
         .sort({ createdAt: -1 });
-      return Ok(res, mentor);
+      
+      // Filter mentors with complete profiles only
+      const completeMentors = allMentors.filter(mentor => {
+        return (
+          mentor.auth?.username &&
+          mentor.auth?.password &&
+          mentor.contact?.email &&
+          mentor.contact?.mobile &&
+          mentor.contact?.address &&
+          mentor.name?.firstName &&
+          mentor.name?.lastName &&
+          mentor.image &&
+          mentor.languages && mentor.languages.length > 0 &&
+          mentor.qualification && mentor.qualification.trim() !== ""
+        );
+      });
+      
+      return Ok(res, completeMentors);
     } catch (err) {
       return UnAuthorized(res, err);
     }
@@ -52,10 +86,27 @@ export class MentorController implements IController {
   public async GetMentorByCategoryId(req: Request, res: Response) {
     try {
       const id = req.params.id;
-      const mentor = await Mentor.find({ category: id })
+      const allMentors = await Mentor.find({ category: id })
         .populate("category")
         .sort({ createdAt: -1 });
-      return Ok(res, mentor);
+      
+      // Filter mentors with complete profiles only
+      const completeMentors = allMentors.filter(mentor => {
+        return (
+          mentor.auth?.username &&
+          mentor.auth?.password &&
+          mentor.contact?.email &&
+          mentor.contact?.mobile &&
+          mentor.contact?.address &&
+          mentor.name?.firstName &&
+          mentor.name?.lastName &&
+          mentor.image &&
+          mentor.languages && mentor.languages.length > 0 &&
+          mentor.qualification && mentor.qualification.trim() !== ""
+        );
+      });
+      
+      return Ok(res, completeMentors);
     } catch (err) {
       return UnAuthorized(res, err);
     }
