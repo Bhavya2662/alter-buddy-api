@@ -234,39 +234,27 @@ export class AuthenticationController implements IController {
     try {
       console.log('=== UserSignUp method called ===');
       console.log('Request body:', req.body);
-      const { emails, password, name, mobiles }: {
-        emails: string[];
+      const { email, password, name, mobile }: {
+        email: string;
         password: string;
         name: { firstName: string; lastName: string };
-        mobiles: string[];
+        mobile: string;
       } = req.body;
-      console.log('Extracted fields:', { emails, password: password ? 'present' : 'missing', name, mobiles });
+      console.log('Extracted fields:', { email, password: password ? 'present' : 'missing', name, mobile });
 
-      if (!emails || !password || !mobiles || !name) {
-        console.log('Missing fields detected:', { emails: !!emails, password: !!password, mobiles: !!mobiles, name: !!name });
+      if (!email || !password || !mobile || !name) {
+        console.log('Missing fields detected:', { email: !!email, password: !!password, mobile: !!mobile, name: !!name });
         return UnAuthorized(res, "missing fields");
       }
 
-      // Validate signup requirements: 1 mobile + 2+ emails OR 1 email + 2+ mobiles
-      const emailCount = emails.length;
-      const mobileCount = mobiles.length;
-      
-      if (!((mobileCount === 1 && emailCount >= 2) || (emailCount === 1 && mobileCount >= 2))) {
-        return UnAuthorized(res, "Invalid signup requirements. You need either 1 mobile + 2+ emails OR 1 email + 2+ mobiles");
-      }
-
-      // Use primary email (first one) for user creation
-      const primaryEmail = emails[0];
-      const primaryMobile = mobiles[0];
-
-      // Check if user already exists with primary email
-      const existingUser = await User.findOne({ email: primaryEmail });
+      // Check if user already exists with this email
+      const existingUser = await User.findOne({ email: email });
       if (existingUser) {
         return UnAuthorized(res, "user is already registered with this email");
       }
 
-      // Check if user already exists with primary mobile
-      const existingMobileUser = await User.findOne({ mobile: primaryMobile });
+      // Check if user already exists with this mobile
+      const existingMobileUser = await User.findOne({ mobile: mobile });
       if (existingMobileUser) {
         return UnAuthorized(res, "user is already registered with this mobile number");
       }
@@ -276,11 +264,11 @@ export class AuthenticationController implements IController {
       const newUser = await new User({
         acType: "USER",
         block: false,
-        email: primaryEmail,
+        email: email,
         online: false,
         password: hashed,
         verified: false,
-        mobile: primaryMobile,
+        mobile: mobile,
         name: {
           firstName: name.firstName,
           lastName: name.lastName,
@@ -292,9 +280,8 @@ export class AuthenticationController implements IController {
         userId: newUser._id,
       }).save();
 
-      // Generate and send OTPs
-      const emailOTPResult = await OTPService.generateAndSendEmailOTP(newUser._id.toString(), primaryEmail);
-      const mobileOTPResult = await OTPService.generateAndSendMobileOTP(newUser._id.toString(), primaryMobile);
+      // Generate and send only email OTP (no mobile OTP)
+      const emailOTPResult = await OTPService.generateAndSendEmailOTP(newUser._id.toString(), email);
 
       const token = jwt.sign(
         {
@@ -307,10 +294,9 @@ export class AuthenticationController implements IController {
       return Ok(res, {
         token,
         userId: newUser._id,
-        message: "User registered successfully. Please verify your email and mobile with the OTPs sent.",
+        message: "User registered successfully. Please verify your email with the OTP sent.",
         otpStatus: {
           email: emailOTPResult,
-          mobile: mobileOTPResult,
         },
         user: {
           id: newUser._id,
