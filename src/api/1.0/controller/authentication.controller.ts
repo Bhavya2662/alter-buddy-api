@@ -175,6 +175,11 @@ export class AuthenticationController implements IController {
         return UnAuthorized(res, "access denied");
       }
       
+      // Check if user email is verified
+      if (!user.verified) {
+        return UnAuthorized(res, "Please verify your email before logging in. Check your inbox for the verification code.");
+      }
+      
       // Check if user account is deactivated (before block check for specific messages)
       if (user.deactivation?.isDeactivated) {
         const deactivationType = user.deactivation.type;
@@ -234,16 +239,15 @@ export class AuthenticationController implements IController {
     try {
       console.log('=== UserSignUp method called ===');
       console.log('Request body:', req.body);
-      const { email, password, name, mobile }: {
+      const { email, password, name }: {
         email: string;
         password: string;
         name: { firstName: string; lastName: string };
-        mobile: string;
       } = req.body;
-      console.log('Extracted fields:', { email, password: password ? 'present' : 'missing', name, mobile });
+      console.log('Extracted fields:', { email, password: password ? 'present' : 'missing', name });
 
-      if (!email || !password || !mobile || !name) {
-        console.log('Missing fields detected:', { email: !!email, password: !!password, mobile: !!mobile, name: !!name });
+      if (!email || !password || !name) {
+        console.log('Missing fields detected:', { email: !!email, password: !!password, name: !!name });
         return UnAuthorized(res, "missing fields");
       }
 
@@ -253,11 +257,7 @@ export class AuthenticationController implements IController {
         return UnAuthorized(res, "user is already registered with this email");
       }
 
-      // Check if user already exists with this mobile
-      const existingMobileUser = await User.findOne({ mobile: mobile });
-      if (existingMobileUser) {
-        return UnAuthorized(res, "user is already registered with this mobile number");
-      }
+
 
       const hashed = bcrypt.hashSync(password, 10);
 
@@ -268,7 +268,6 @@ export class AuthenticationController implements IController {
         online: false,
         password: hashed,
         verified: false,
-        mobile: mobile,
         name: {
           firstName: name.firstName,
           lastName: name.lastName,
@@ -301,7 +300,6 @@ export class AuthenticationController implements IController {
         user: {
           id: newUser._id,
           email: newUser.email,
-          mobile: newUser.mobile,
           name: newUser.name,
         },
       });

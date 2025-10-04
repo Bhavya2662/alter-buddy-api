@@ -14,8 +14,8 @@
   "REACT_APP_100MD_SDK_AUDIO_TEMPLATE": "66a096efad8abf3a324d273a",
   "FRONTEND_URL": "http://localhost:3000",
   "ADMIN_API_KEY": "admin-webhook-key-123",
-  "SMTP_HOST": "smtp.gmail.com",
-  "SMTP_USER": "alterbuddy8@gmail.com",
-  "SMTP_PASS": "your-app-password",
-  "SMTP_FROM": "alterbuddy8@gmail.com"
+  "SMTP_HOST": "smtp-relay.brevo.com",
+  "SMTP_USER": "8b5d1c001@smtp-brevo.com",
+  "SMTP_PASS": "GAm659Ba70sZO1ES",
+  "SMTP_FROM": "Alter Buddy <alterbuddy8@gmail.com>"
 }
