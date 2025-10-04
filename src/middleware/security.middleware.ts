@@ -99,6 +99,7 @@ export const corsOptions = {
       'http://localhost:3003',
       'http://localhost:3004',
       'https://alter-buddy-frontend.vercel.app',
+      'https://alter-buddy-admin.vercel.app',
       'https://alter-buddy-frontend-git-main-bhavyas-projects-76b90fb1.vercel.app',
       'https://alter-buddy-admin-4ds3tf3c7-bhavyas-projects-76b90fb1.vercel.app',
       'https://alter-buddy-frontend-g4gexm8vo-bhavyas-projects-76b90fb1.vercel.app',
