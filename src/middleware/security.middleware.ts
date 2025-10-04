@@ -11,6 +11,11 @@ const rateLimitStore: { [key: string]: RateLimitEntry } = {};
 // Custom rate limiter factory
 const createRateLimiter = (windowMs: number, max: number, message: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
+    // Skip rate limiting for CORS preflight requests
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+
     const key = req.ip || (req.connection as any)?.remoteAddress || 'unknown';
     const now = Date.now();
 
@@ -70,7 +75,7 @@ export const passwordResetLimiter = createRateLimiter(
 
 export const generalLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 minutes
-  100, // 100 requests
+  500, // 500 requests (increased from 100)
   'Too many requests, please try again later.'
 );
 

@@ -13,6 +13,7 @@ import jwt from "jsonwebtoken";
 import config from "config";
 import { IUserProps } from "interface/user.interface";
 import { AuthForAdmin, AuthForMentor, AuthForUser } from "../../../middleware";
+import { loginLimiter } from "../../../middleware/security.middleware";
 import Nodemailer, { SendMailOptions } from "nodemailer";
 import { OTPService } from "../../../services/otp.service";
 import { DeactivationService } from "../../../services/deactivation.service";
@@ -25,6 +26,7 @@ export class AuthenticationController implements IController {
       path: "/sign-in",
       handler: this.UserSignIn,
       method: "PUT",
+      middleware: [loginLimiter],
     });
     this.routes.push({
       path: "/sign-up",
@@ -41,6 +43,7 @@ export class AuthenticationController implements IController {
       handler: this.MentorSignIn,
       method: "PUT",
       path: "/mentor/sign-in",
+      middleware: [loginLimiter],
     });
     this.routes.push({
       path: "/mentor/:id",
@@ -65,6 +68,7 @@ export class AuthenticationController implements IController {
       handler: this.AdminSignIn,
       method: "PUT",
       path: "/admin/sign-in",
+      middleware: [loginLimiter],
     });
     this.routes.push({
       handler: this.AdminTest,
