@@ -1,0 +1,126 @@
+{
+  "timestamp": "2025-10-06T06:59:52.881Z",
+  "baseUrl": "http://localhost:8080",
+  "tests": [
+    {
+      "name": "Get All Group Sessions",
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "sessionsCount": 13,
+        "sampleSession": {
+          "_id": "686f93490ad64a94f5156280",
+          "mentorId": null,
+          "categoryId": {
+            "_id": "6800e8e5b0def0e74ae1bd4d",
+            "title": "RANT",
+            "status": true,
+            "createdAt": "2025-04-17T11:41:25.521Z",
+            "updatedAt": "2025-04-17T11:41:25.521Z",
+            "__v": 0
+          },
+          "title": "inner child healing",
+          "description": "This releases all your childhood traumas",
+          "sessionType": "video",
+          "price": 1000,
+          "capacity": 5,
+          "bookedUsers": [
+            {
+              "name": {
+                "firstName": "test",
+                "lastName": "user"
+              },
+              "deactivation": {
+                "isDeactivated": false,
+                "markedForDeletion": false
+              },
+              "otp": {
+                "mobile": {
+                  "verified": false
+                },
+                "email": {
+                  "verified": false
+                }
+              },
+              "_id": "68a2ffa2e50fb244ba4905dd",
+              "acType": "USER",
+              "email": "testuser@example.com",
+              "mobile": "1234567890",
+              "password": "$2b$10$EmgJuFtyI/a.AaxzmR3NzOX7g710Md7co/sJ3OfGxNw2IJzoY0Jry",
+              "block": false,
+              "verified": false,
+              "online": false,
+              "myInitialCategories": [],
+              "createdAt": "2025-08-18T10:25:38.045Z",
+              "updatedAt": "2025-10-03T14:24:52.064Z",
+              "__v": 1,
+              "isVerified": true,
+              "interests": [],
+              "wallet": 1000,
+              "isDeactivated": false,
+              "markedForDeletion": false
+            }
+          ],
+          "scheduledAt": "2025-07-10T13:17:00.000Z",
+          "joinLink": "",
+          "status": "scheduled",
+          "createdAt": "2025-07-10T10:17:45.270Z",
+          "updatedAt": "2025-08-31T10:50:10.315Z",
+          "__v": 1
+        }
+      }
+    },
+    {
+      "name": "Get Mentor Group Sessions",
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "mentorId": "68a3849fa4e79f23deb23bf1",
+        "sessionsCount": 1
+      }
+    },
+    {
+      "name": "Get Existing Session for Testing",
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "sessionId": "686f93490ad64a94f5156280",
+        "title": "inner child healing"
+      }
+    },
+    {
+      "name": "Create Group Session",
+      "status": "skipped",
+      "reason": "No mentor authentication token available"
+    },
+    {
+      "name": "Book Group Session",
+      "status": "skipped",
+      "reason": "No user authentication token available"
+    },
+    {
+      "name": "Join Group Session by Room ID",
+      "status": "skipped",
+      "reason": "No test room ID available from creation step"
+    },
+    {
+      "name": "Join Session by Room ID (Alternative)",
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "roomId": "room_1756664180677_1hb5fjx87",
+        "sessionTitle": "Healing"
+      }
+    },
+    {
+      "name": "Update Group Session",
+      "status": "skipped",
+      "reason": "No mentor authentication token available"
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "passed": 4,
+    "failed": 0
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "timestamp": "2025-10-06T08:48:55.940Z",
+  "tests": [
+    {
+      "test": "Google Form Access",
+      "status": "passed",
+      "details": "Form accessible with status 200",
+      "timestamp": "2025-10-06T08:48:56.781Z"
+    },
+    {
+      "test": "Energy Work Page Access",
+      "status": "failed",
+      "details": "Error: Request failed with status code 404",
+      "timestamp": "2025-10-06T08:48:56.970Z"
+    },
+    {
+      "test": "Google Form Structure",
+      "status": "passed",
+      "details": "Form contains expected HTML elements",
+      "timestamp": "2025-10-06T08:48:57.827Z"
+    },
+    {
+      "test": "Google Form Validation",
+      "status": "passed",
+      "details": "Confirmed as valid Google Form",
+      "timestamp": "2025-10-06T08:48:57.827Z"
+    },
+    {
+      "test": "CTA Button: TALK TO US NOW (Main CTA)",
+      "status": "passed",
+      "details": "Successfully opens Google Form",
+      "timestamp": "2025-10-06T08:48:58.554Z"
+    },
+    {
+      "test": "CTA Button: TALK TO US NOW (Bottom CTA)",
+      "status": "passed",
+      "details": "Successfully opens Google Form",
+      "timestamp": "2025-10-06T08:48:59.294Z"
+    },
+    {
+      "test": "CTA Button: BOOK MY ENERGY SCAN NOW",
+      "status": "failed",
+      "details": "Error: Request failed with status code 404",
+      "timestamp": "2025-10-06T08:48:59.316Z"
+    },
+    {
+      "test": "CTA Button: BOOK ME FOR MY VORTEX PROTECTION",
+      "status": "failed",
+      "details": "Error: Request failed with status code 404",
+      "timestamp": "2025-10-06T08:48:59.322Z"
+    },
+    {
+      "test": "Responsive Design: Desktop Chrome",
+      "status": "failed",
+      "details": "Error: Request failed with status code 404",
+      "timestamp": "2025-10-06T08:48:59.376Z"
+    },
+    {
+      "test": "Responsive Design: Mobile Safari",
+      "status": "failed",
+      "details": "Error: Request failed with status code 404",
+      "timestamp": "2025-10-06T08:48:59.379Z"
+    },
+    {
+      "test": "Responsive Design: Android Chrome",
+      "status": "failed",
+      "details": "Error: Request failed with status code 404",
+      "timestamp": "2025-10-06T08:48:59.381Z"
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "passed": 5,
+    "failed": 6,
+    "skipped": 0
+  }
+}

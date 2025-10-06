@@ -1,0 +1,82 @@
+{
+  "timestamp": "2025-10-06T06:36:38.293Z",
+  "baseUrl": "http://localhost:8080",
+  "tests": [
+    {
+      "name": "User Signup",
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "success": true,
+        "data": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZTM2Mzc2NTAyZGM4MzQ3Y2IzNmQwNSIsImlhdCI6MTc1OTczMjU5OSwiZXhwIjoxNzYyMzI0NTk5fQ.nrrzEuPD6QQYnbJCfsNM3GPc6Vf1-XbyEyHl1x9y2Uk",
+          "userId": "68e36376502dc8347cb36d05",
+          "message": "User registered successfully. Please verify your email with the OTP sent.",
+          "otpStatus": {
+            "email": {
+              "success": true,
+              "message": "Email OTP sent successfully"
+            }
+          },
+          "user": {
+            "id": "68e36376502dc8347cb36d05",
+            "email": "testuser1759732598299@example.com",
+            "name": {}
+          }
+        },
+        "status_code": "Ok"
+      },
+      "testData": {
+        "name": "Test User 1759732598299",
+        "email": "testuser1759732598299@example.com",
+        "mobile": "9415818207"
+      }
+    },
+    {
+      "name": "Duplicate Email Signup",
+      "status": "correctly_failed",
+      "statusCode": 401,
+      "error": {
+        "success": false,
+        "status_code": 401,
+        "message": "user is already registered with this email"
+      }
+    },
+    {
+      "name": "Invalid Email Format",
+      "status": "unexpected_success",
+      "statusCode": 200,
+      "data": {
+        "success": true,
+        "data": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZTM2Mzc3NTAyZGM4MzQ3Y2IzNmQwYyIsImlhdCI6MTc1OTczMjU5OSwiZXhwIjoxNzYyMzI0NTk5fQ.y0LanVaiyF1ak2Mvnyjv1Acx6QrSphGztmO2J9KNOjA",
+          "userId": "68e36377502dc8347cb36d0c",
+          "message": "User registered successfully. Please verify your email with the OTP sent.",
+          "otpStatus": {
+            "email": {
+              "success": false,
+              "message": "Failed to send email OTP"
+            }
+          },
+          "user": {
+            "id": "68e36377502dc8347cb36d0c",
+            "email": "invalid-email-format",
+            "name": {}
+          }
+        },
+        "status_code": "Ok"
+      },
+      "note": "This should have failed but succeeded"
+    },
+    {
+      "name": "Missing Required Fields",
+      "status": "correctly_failed",
+      "statusCode": 401,
+      "error": {
+        "success": false,
+        "status_code": 401,
+        "message": "missing fields"
+      }
+    }
+  ]
+}

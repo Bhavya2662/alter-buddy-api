@@ -1,0 +1,87 @@
+{
+  "timestamp": "2025-10-06T07:20:20.491Z",
+  "baseUrl": "http://localhost:8080",
+  "tests": [
+    {
+      "name": "Create Session Package",
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "packageId": "68e36db5d74b775043d3d676",
+        "type": "video",
+        "totalSessions": 5,
+        "price": 2500,
+        "status": "active"
+      }
+    },
+    {
+      "name": "Get User Packages",
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "userId": "68a2f604e5e716fa5eeb48b0",
+        "packagesCount": 1,
+        "samplePackage": {
+          "_id": "68e36db5d74b775043d3d676",
+          "userId": "68a2f604e5e716fa5eeb48b0",
+          "mentorId": null,
+          "categoryId": {
+            "_id": "6839863e12dc335fec5b873b",
+            "title": "Past Life Regression",
+            "status": true,
+            "createdAt": "2025-05-30T10:19:42.594Z",
+            "updatedAt": "2025-08-13T14:06:11.888Z",
+            "__v": 0
+          },
+          "type": "video",
+          "totalSessions": 5,
+          "remainingSessions": 5,
+          "price": 2500,
+          "status": "active",
+          "expiryDate": "2025-11-05T07:20:21.110Z",
+          "createdAt": "2025-10-06T07:20:21.325Z",
+          "updatedAt": "2025-10-06T07:20:21.325Z",
+          "__v": 0
+        }
+      }
+    },
+    {
+      "name": "Use Session from Package",
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "packageId": "68e36db5d74b775043d3d676",
+        "remainingSessions": 4,
+        "status": "active"
+      }
+    },
+    {
+      "name": "Get Mentor Created Packages",
+      "status": "skipped",
+      "reason": "No mentor authentication token available"
+    },
+    {
+      "name": "Update Package",
+      "status": "skipped",
+      "reason": "No mentor authentication token available"
+    },
+    {
+      "name": "Package Filtering by Type",
+      "status": "success",
+      "data": {
+        "userId": "68a2f604e5e716fa5eeb48b0",
+        "testedTypes": [
+          "chat",
+          "audio",
+          "video"
+        ],
+        "totalFilteredPackages": 1
+      }
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 4,
+    "failed": 0
+  }
+}

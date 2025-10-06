@@ -6,11 +6,16 @@
   "scripts": {
     "start": "node build/bin/www.js",
     "dev": "nodemon src/index.ts",
-    "build": "tsc",
-    "vercel-build": "npm run build"
+    "build": "npm run clean && tsc",
+    "vercel-build": "npm run build",
+    "clean": "rm -rf build",
+    "postinstall": "npm run build",
+    "render-build": "npm install && npm run build",
+    "pre-deploy-test": "node pre-deploy-test.js"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "dependencies": {
     "@100mslive/server-sdk": "^0.0.1",

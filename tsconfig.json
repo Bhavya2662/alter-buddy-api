@@ -3,13 +3,17 @@
     "module": "CommonJS",
     "baseUrl": "src",
     "noImplicitAny": false,
-    "target": "ES2018",
-    "lib": ["ES2018"],
+    "target": "ES2020",
+    "lib": [
+      "ES2020"
+    ],
     "outDir": "./build/",
     "rootDir": "./src",
-    "sourceMap": true,
+    "sourceMap": false,
     "allowJs": true,
-    "typeRoots": ["./node_modules/@types"],
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -19,8 +23,15 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": false,
     "removeComments": true,
-    "strict": false
+    "strict": false,
+    "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "build", "**/*.spec.ts"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "**/*.spec.ts"
+  ]
 }

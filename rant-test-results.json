@@ -1,0 +1,98 @@
+{
+  "timestamp": "2025-10-06T07:38:32.085Z",
+  "baseUrl": "http://localhost:8080",
+  "tests": [
+    {
+      "test": "Get Ably Token",
+      "status": "PASS",
+      "timestamp": "2025-10-06T07:38:32.264Z",
+      "statusCode": 200,
+      "hasToken": true
+    },
+    {
+      "test": "Get Stream Token",
+      "status": "PASS",
+      "timestamp": "2025-10-06T07:38:32.268Z",
+      "statusCode": 200,
+      "hasToken": true
+    },
+    {
+      "test": "Create Anonymous Session",
+      "status": "PASS",
+      "timestamp": "2025-10-06T07:38:32.470Z",
+      "statusCode": 200,
+      "sessionId": "rant_1759736312417_turgap2at",
+      "roomId": "room_1759736312417_turgap2at",
+      "sessionType": "chat",
+      "waitingForMentor": true
+    },
+    {
+      "test": "Get Session Status",
+      "status": "PENDING",
+      "timestamp": "2025-10-06T07:38:32.544Z",
+      "statusCode": 200,
+      "sessionId": "rant_1759736312417_turgap2at",
+      "sessionType": "chat",
+      "roomId": "room_1759736312417_turgap2at"
+    },
+    {
+      "test": "Get Active Sessions",
+      "status": "PASS",
+      "timestamp": "2025-10-06T07:38:32.589Z",
+      "statusCode": 200,
+      "activeSessionsCount": 1,
+      "sessions": [
+        {
+          "sessionId": "rant_1759736312417_turgap2at",
+          "status": "PENDING",
+          "sessionType": "chat"
+        }
+      ]
+    },
+    {
+      "test": "End Anonymous Session",
+      "status": "PASS",
+      "timestamp": "2025-10-06T07:38:32.688Z",
+      "statusCode": 200,
+      "sessionId": "rant_1759736312417_turgap2at",
+      "message": "Session ended successfully"
+    },
+    {
+      "test": "Different Session Types",
+      "status": "PASS",
+      "timestamp": "2025-10-06T07:38:36.339Z",
+      "testedTypes": [
+        "chat",
+        "video",
+        "audio"
+      ],
+      "successfulTypes": 2,
+      "results": [
+        {
+          "sessionType": "chat",
+          "success": true,
+          "sessionId": "rant_1759736312829_nhcdlazco",
+          "roomId": "room_1759736312829_nhcdlazco"
+        },
+        {
+          "sessionType": "video",
+          "success": false,
+          "error": "Invalid session type. Must be 'audio' or 'chat'"
+        },
+        {
+          "sessionType": "audio",
+          "success": true,
+          "sessionId": "rant_1759736315161_cdzlcb106",
+          "roomId": "room_1759736315161_cdzlcb106"
+        }
+      ],
+      "note": "Partial success - some session types failed"
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0
+  }
+}

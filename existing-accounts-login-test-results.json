@@ -1,0 +1,65 @@
+{
+  "timestamp": "2025-10-06T06:34:24.085Z",
+  "baseUrl": "http://localhost:8080",
+  "tests": [
+    {
+      "test": "Server Health",
+      "status": "PASS",
+      "statusCode": 200,
+      "response": {
+        "success": true,
+        "data": {
+          "message": "Admin test endpoint working"
+        },
+        "status_code": "Ok"
+      }
+    },
+    {
+      "test": "User Login",
+      "status": "FAIL",
+      "statusCode": 401,
+      "credentials": "kg224245@gmail.com",
+      "error": {
+        "success": false,
+        "status_code": 401,
+        "message": "Please verify your email before logging in. Check your inbox for the verification code."
+      }
+    },
+    {
+      "test": "Admin Login",
+      "status": "PASS",
+      "statusCode": 200,
+      "credentials": "admin@alterbuddy.com",
+      "response": {
+        "success": true,
+        "data": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmNjA0ZTVlNzE2ZmE1ZWViNDhiMCIsImlhdCI6MTc1OTczMjQ2NCwiZXhwIjoxNzYyMzI0NDY0fQ.EyR7C5p9rnkhq-t5tiF8RnUObbU5hT2yE60h6VJtQ3M",
+          "user": "1234567890 is logged in"
+        },
+        "status_code": "Ok"
+      }
+    },
+    {
+      "test": "Mentor Login",
+      "status": "FAIL",
+      "statusCode": 401,
+      "credentials": "Sachishah",
+      "error": {
+        "success": false,
+        "status_code": 401,
+        "message": "wrong password"
+      }
+    },
+    {
+      "test": "Alternative Admin Login",
+      "status": "FAIL",
+      "statusCode": 401,
+      "credentials": "testadmin@alterbuddy.com",
+      "error": {
+        "success": false,
+        "status_code": 401,
+        "message": "wrong password"
+      }
+    }
+  ]
+}

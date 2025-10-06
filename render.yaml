@@ -2,9 +2,14 @@ services:
   - type: web
     name: alterbuddy-api
     env: node
-    plan: free
-    buildCommand: npm install && npm run build
+    plan: starter  # Changed from free to starter for better performance
+    buildCommand: npm install && npm run clean && npm run build
     startCommand: npm start
+    healthCheckPath: /api/1.0/health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        sync: false
+    autoDeploy: true
+    branch: main
