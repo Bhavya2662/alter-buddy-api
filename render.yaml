@@ -3,10 +3,13 @@ services:
     name: alterbuddy-api
     env: node
     plan: starter  # Changed from free to starter for better performance
-    buildCommand: npm install && npm run clean && npm run build
+    runtime: node
+    buildCommand: npm ci && npm run render-build
     startCommand: npm start
     healthCheckPath: /api/1.0/health
     envVars:
+      - key: NODE_VERSION
+        value: 18.20.4
       - key: NODE_ENV
         value: production
       - key: PORT
