@@ -598,13 +598,14 @@ export class AuthenticationController implements IController {
         { expiresIn: "30d" }
       );
 
-      // Set secure cookie for cross-domain authentication
+      // Set secure cookie for cross-domain authentication - Mobile compatible
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'strict' | 'lax' | 'none',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined
+        // Remove domain restriction for mobile compatibility
+        domain: undefined
       };
 
       res.cookie('adminToken', token, cookieOptions);

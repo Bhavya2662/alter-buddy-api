@@ -46,41 +46,17 @@ class App {
     // Rate limiting
     this.express.use(generalLimiter);
     
-        // CORS configuration - Enhanced for cross-device authentication
-    this.express.use(
-      cors({
-        origin: function (origin, callback) {
-          const allowedOrigins = [
-            'http://localhost:3000',
-            'http://localhost:3001',
-            'http://localhost:3002',
-            'http://localhost:3003',
-            'http://localhost:3004',
-            'https://alter-buddy-frontend.vercel.app',
-            'https://alter-buddy-admin.vercel.app',
-            'https://alter-buddy-rant-app.vercel.app',
-            'https://alter-buddy-frontend-git-main-bhavyas-projects-76b90fb1.vercel.app',
-            'https://alter-buddy-admin-4ds3tf3c7-bhavyas-projects-76b90fb1.vercel.app',
-            'https://alter-buddy-frontend-g4gexm8vo-bhavyas-projects-76b90fb1.vercel.app'
-          ];
-          
-          // Allow requests with no origin (mobile apps, etc.)
-          if (!origin) return callback(null, true);
-          
-          if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-          } else {
-            console.log('CORS blocked origin:', origin);
-            callback(null, true); // Allow all origins for now to fix cross-device issues
-          }
-        },
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
-        credentials: true,
-        optionsSuccessStatus: 200,
-        preflightContinue: false
-      })
-    );
+    // CORS configuration - Use the centralized CORS options from security middleware
+    this.express.use(cors(corsOptions));
+    
+    // Additional CORS preflight handling for mobile compatibility
+    this.express.options('*', (req: Request, res: Response) => {
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+      res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.sendStatus(200);
+    });
     // this.express.use(createClient({}));
   }
 
