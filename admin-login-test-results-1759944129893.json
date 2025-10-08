@@ -1,0 +1,81 @@
+{
+  "summary": {
+    "timestamp": "2025-10-08T17:22:09.893Z",
+    "totalTests": 5,
+    "passedTests": 3,
+    "failedTests": 2,
+    "successRate": "60.0%"
+  },
+  "tests": [
+    {
+      "test": "Admin Login (Local)",
+      "success": true,
+      "message": "Login successful. User: admin@alterbuddy.com, Role: ADMIN",
+      "timestamp": "2025-10-08T17:22:09.424Z",
+      "data": {
+        "userId": "68a2f604e5e716fa5eeb48b0",
+        "email": "admin@alterbuddy.com",
+        "role": "ADMIN",
+        "tokenLength": 252
+      },
+      "error": null
+    },
+    {
+      "test": "Admin Auth Test (Local)",
+      "success": true,
+      "message": "Authenticated admin request successful",
+      "timestamp": "2025-10-08T17:22:09.426Z",
+      "data": null,
+      "error": null
+    },
+    {
+      "test": "Invalid Credentials Test (Local)",
+      "success": true,
+      "message": "Correctly rejected invalid credentials with 401",
+      "timestamp": "2025-10-08T17:22:09.449Z",
+      "data": null,
+      "error": null
+    },
+    {
+      "test": "Admin Login (Production)",
+      "success": false,
+      "message": "Login failed: Request failed with status code 404",
+      "timestamp": "2025-10-08T17:22:09.843Z",
+      "data": null,
+      "error": {
+        "message": "Request failed with status code 404",
+        "status": 404,
+        "statusText": "Not Found",
+        "data": {
+          "status": "error",
+          "code": 404,
+          "message": "Application not found",
+          "request_id": "rxKTirHFRr-MfXypDcO5xA"
+        }
+      }
+    },
+    {
+      "test": "Invalid Credentials Test (Production)",
+      "success": false,
+      "message": "Unexpected error: Request failed with status code 404",
+      "timestamp": "2025-10-08T17:22:09.892Z",
+      "data": null,
+      "error": {
+        "message": "Request failed with status code 404",
+        "status": 404,
+        "statusText": "Not Found",
+        "data": {
+          "status": "error",
+          "code": 404,
+          "message": "Application not found",
+          "request_id": "vIaJoa7tSAqPnWfYDcO5xA"
+        }
+      }
+    }
+  ],
+  "environment": {
+    "localApiUrl": "http://localhost:8080/api/1.0",
+    "productionApiUrl": "https://alter-buddy-api-main-production.up.railway.app/api/1.0",
+    "adminEmail": "admin@alterbuddy.com"
+  }
+}
