@@ -487,7 +487,8 @@ export class AuthenticationController implements IController {
       // Check if mentor exists
       const mentor = await Mentor.findOne({ 
         "contact.email": email.toLowerCase(),
-        "accountStatus.active": true 
+        "accountStatus.block": false,
+        "accountStatus.verification": true
       });
 
       if (!mentor) {
