@@ -93,37 +93,24 @@ export const securityHeaders = (req: Request, res: Response, next: NextFunction)
   next();
 };
 
-// CORS configuration with updated production URLs
+// CORS configuration - Allow all domains for mobile and cross-device access
 export const corsOptions = {
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-      'http://localhost:3003',
-      'http://localhost:3004',
-      'https://alter-buddy-frontend.vercel.app',
-      'https://alter-buddy-admin.vercel.app',
-      'https://alter-buddy-rant-app.vercel.app',
-      'https://alter-buddy-frontend-git-main-bhavyas-projects-76b90fb1.vercel.app',
-      'https://alter-buddy-admin-4ds3tf3c7-bhavyas-projects-76b90fb1.vercel.app',
-      'https://alter-buddy-frontend-g4gexm8vo-bhavyas-projects-76b90fb1.vercel.app',
-      config.get('FRONTEND_URL') || 'http://localhost:3000'
-    ];
-
-    // Allow requests with no origin (mobile apps, etc.)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Allow all origins for maximum compatibility with mobile devices and cross-device access
+    callback(null, true);
   },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ]
 };
 
 // Input sanitization middleware
