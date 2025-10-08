@@ -567,7 +567,8 @@ export class AuthenticationController implements IController {
       const admin = await User.findOne({ 
         email: email.toLowerCase(),
         acType: 'ADMIN',
-        isActive: true 
+        block: false,
+        'deactivation.isDeactivated': { $ne: true }
       });
 
       if (!admin) {
