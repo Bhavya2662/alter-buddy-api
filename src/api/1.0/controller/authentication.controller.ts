@@ -72,6 +72,12 @@ export class AuthenticationController implements IController {
       path: "/admin/test",
     });
     this.routes.push({
+      handler: this.MentorTest,
+      method: "GET",
+      path: "/mentor/test",
+      middleware: [AuthForMentor],
+    });
+    this.routes.push({
       handler: this.MentorSignUp,
       method: "POST",
       path: "/mentor/sign-up",
@@ -571,6 +577,11 @@ export class AuthenticationController implements IController {
   public async AdminTest(req: Request, res: Response) {
     console.log('AdminTest endpoint hit!');
     return Ok(res, { message: 'Admin test endpoint working' });
+  }
+
+  public async MentorTest(req: Request, res: Response) {
+    console.log('MentorTest endpoint hit!');
+    return Ok(res, { message: 'Mentor test endpoint working' });
   }
 
   public async MentorSignOut(req: Request, res: Response) {
