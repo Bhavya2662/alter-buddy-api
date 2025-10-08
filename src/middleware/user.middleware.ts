@@ -1,3 +1,20 @@
+import config from "config";
+import jwt from "jsonwebtoken";
+
+const extractToken = (req: Request): string | null => {
+  // Try Authorization header first
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  
+  // Try cookies as fallback
+  const adminToken = req.cookies?.adminToken;
+  const mentorToken = req.cookies?.mentorToken;
+  const userToken = req.cookies?.userToken;
+  
+  return adminToken || mentorToken || userToken || null;
+};
 import { Request, Response } from "express";
 import { NextFunction } from "express";
 import { Mentor, User } from "../model";
@@ -58,67 +75,62 @@ export const AuthForUser = async (
   }
 };
 
-export const AuthForMentor = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const AuthForMentor = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = getTokenFromHeader(req);
+    const token = extractToken(req);
+    
     if (!token) {
-      return BadRequest(res, "please login");
+      return res.status(401).json({
+        success: false,
+        message: "Access denied. No token provided."
+      });
     }
 
-    const verified = verifyToken(token);
-
-    const mentor = await Mentor.findOne({ _id: verified.id });
-
-    if (!mentor) {
-      return UnAuthorized(res, "mentor not found");
+    const decoded = jwt.verify(token, config.get("JWT_SECRET")) as any;
+    
+    if (decoded.role !== 'mentor' && decoded.type !== 'mentor') {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Mentor privileges required."
+      });
     }
 
-    if (mentor.acType !== "MENTOR") {
-      return UnAuthorized(res, "access_denied");
-    }
-
-    if (!verified.id) {
-      return BadRequest(res, "failed to verify token");
-    }
-
+    (req as any).user = decoded;
     next();
-  } catch (err) {
-    return UnAuthorized(res, err);
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid token."
+    });
   }
 };
 
-export const AuthForAdmin = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const AuthForAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = getTokenFromHeader(req);
+    const token = extractToken(req);
+    
     if (!token) {
-      return BadRequest(res, "please login");
+      return res.status(401).json({
+        success: false,
+        message: "Access denied. No token provided."
+      });
     }
 
-    const verified = verifyToken(token);
-    const user = await User.findOne({ _id: verified.id });
+    const decoded = jwt.verify(token, config.get("JWT_SECRET")) as any;
     
-    if (!user) {
-      return UnAuthorized(res, "user not found");
-    }
-    
-    if (user.acType !== "ADMIN") {
-      return UnAuthorized(res, "access_denied");
-    }
-
-    if (!verified.id) {
-      return BadRequest(res, "failed to verify token");
+    if (decoded.role !== 'admin' && decoded.type !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin privileges required."
+      });
     }
 
+    (req as any).user = decoded;
     next();
-  } catch (err) {
-    return UnAuthorized(res, err);
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid token."
+    });
   }
 };

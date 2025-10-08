@@ -475,102 +475,160 @@ export class AuthenticationController implements IController {
 
   public async MentorSignIn(req: Request, res: Response) {
     try {
-      const { password, username }: IMentorAuthProps = req.body;
-      if (!username || !password) {
-        return UnAuthorized(res, "missing fields");
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Email and password are required"
+        });
       }
-      const mentor = await Mentor.findOne({
-        "auth.username": username,
+
+      // Check if mentor exists
+      const mentor = await Mentor.findOne({ 
+        "contact.email": email.toLowerCase(),
+        "accountStatus.active": true 
       });
+
       if (!mentor) {
-        return UnAuthorized(res, "no user found");
+        return res.status(401).json({
+          success: false,
+          message: "Invalid mentor credentials"
+        });
       }
-      if (mentor.acType !== "MENTOR") {
-        return UnAuthorized(res, "access denied");
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, mentor.auth.password);
+      if (!isValidPassword) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid mentor credentials"
+        });
       }
-      if (mentor.accountStatus.block) {
-        return UnAuthorized(res, "your account has been blocked by admin");
-      }
-      const isPasswordValid = await bcrypt.compare(password, mentor.auth.password);
-      if (!isPasswordValid) {
-        return UnAuthorized(res, "wrong password");
-      }
+
+      // Generate JWT token
       const token = jwt.sign(
-        {
+        { 
           id: mentor._id,
+          email: mentor.contact.email,
+          role: 'mentor',
+          type: 'mentor'
         },
         config.get("JWT_SECRET"),
-        { expiresIn: config.get("JWT_EXPIRE") }
+        { expiresIn: "30d" }
       );
-      await Mentor.findByIdAndUpdate(
-        { _id: mentor._id },
-        { $set: { "accountStatus.online": true } }
-      );
-      return Ok(res, {
-        token,
-        message: `${mentor.contact.mobile} is logged in`,
+
+      // Set secure cookie for cross-domain authentication
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'strict' | 'lax' | 'none',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined
+      };
+
+      res.cookie('mentorToken', token, cookieOptions);
+
+      return res.status(200).json({
+        success: true,
+        message: "Mentor login successful",
+        data: {
+          token,
+          user: {
+            id: mentor._id,
+            email: mentor.contact.email,
+            name: mentor.name,
+            role: 'mentor'
+          }
+        }
       });
-    } catch (err) {
-      return UnAuthorized(res, err);
+
+    } catch (error) {
+      console.error('Mentor login error:', error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
     }
   }
 
   public async AdminSignIn(req: Request, res: Response) {
-    console.log('=== AdminSignIn method called ===');
-    console.log('Request body:', req.body);
-    console.log('Request headers:', req.headers);
     try {
       const { email, password } = req.body;
-      console.log('AdminSignIn attempt for email:', email);
       
       if (!email || !password) {
-        console.log('Missing fields in admin login');
-        return UnAuthorized(res, "missing fields");
-      }
-      
-      const user = await User.findOne({ email });
-      if (!user) {
-        console.log('No user found for email:', email);
-        return UnAuthorized(res, "no user found");
-      }
-      
-      console.log('User found, acType:', user.acType);
-      if (user.acType !== "ADMIN") {
-        console.log('Access denied - user is not admin');
-        return UnAuthorized(res, "access denied");
+        return res.status(400).json({
+          success: false,
+          message: "Email and password are required"
+        });
       }
 
-      console.log('Checking password...');
-      if (!bcrypt.compareSync(password, user.password)) {
-        console.log('Wrong password for admin:', email);
-        return UnAuthorized(res, "wrong password");
-      }
-      
-      console.log('Password correct, generating token...');
-       console.log('JWT config - Secret exists:', !!config.get("JWT_SECRET"), 'Expire:', config.get("JWT_EXPIRE"));
-       
-       const token = jwt.sign(
-         {
-           id: user._id,
-         },
-         config.get("JWT_SECRET"),
-         { expiresIn: config.get("JWT_EXPIRE") }
-       );
-      
-      console.log('Token generated, updating user online status...');
-      await User.findByIdAndUpdate(
-        { _id: user._id },
-        { $set: { online: true } }
-      );
-      
-      console.log('Admin login successful for:', email);
-      return Ok(res, {
-        token,
-        user: `${user.mobile || user.email} is logged in`,
+      // Check if admin exists
+      const admin = await User.findOne({ 
+        email: email.toLowerCase(),
+        acType: 'ADMIN',
+        isActive: true 
       });
-    } catch (err) {
-      console.error('AdminSignIn error:', err);
-      return UnAuthorized(res, `Internal server error: ${err.message}`);
+
+      if (!admin) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid admin credentials"
+        });
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, admin.password);
+      if (!isValidPassword) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid admin credentials"
+        });
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { 
+          id: admin._id,
+          email: admin.email,
+          role: admin.acType,
+          type: 'admin'
+        },
+        config.get("JWT_SECRET"),
+        { expiresIn: "30d" }
+      );
+
+      // Set secure cookie for cross-domain authentication
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'strict' | 'lax' | 'none',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined
+      };
+
+      res.cookie('adminToken', token, cookieOptions);
+
+      return res.status(200).json({
+        success: true,
+        message: "Admin login successful",
+        data: {
+          token,
+          user: {
+            id: admin._id,
+            email: admin.email,
+            name: admin.name,
+            role: admin.acType
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Admin login error:', error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
     }
   }
 
