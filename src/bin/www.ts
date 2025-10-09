@@ -93,26 +93,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Listen for user registration to track online status
-  socket.on("registerUser", async (data) => {
-    console.log('🔌 registerUser event received:', data);
-    const { userId } = data;
-    if (userId) {
-      userSockets.set(userId, socket.id);
-      console.log(`User ${userId} connected with socket ${socket.id}`);
-      
-      // Update user online status in database
-      try {
-        await User.findByIdAndUpdate(userId, { $set: { online: true } });
-        console.log(`User ${userId} status updated to online`);
-      } catch (error) {
-        console.error(`Error updating user ${userId} online status:`, error);
-      }
-    } else {
-      console.log('❌ No userId provided in registerUser event');
-    }
-  });
-
   // Listen for chat request from the first app
   socket.on("requestChat", (data) => {
     // Emit chat request to the second app
