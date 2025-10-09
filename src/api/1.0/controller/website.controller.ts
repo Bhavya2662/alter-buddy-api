@@ -55,6 +55,18 @@ export class WebsiteController implements IController {
       path: "/website/users/:id/block",
       middleware: [AuthForAdmin],
     });
+    this.routes.push({
+      handler: this.GrantBlogPermission,
+      method: "PUT",
+      path: "/website/users/:id/grant-blog-permission",
+      middleware: [AuthForAdmin],
+    });
+    this.routes.push({
+      handler: this.RevokeBlogPermission,
+      method: "PUT",
+      path: "/website/users/:id/revoke-blog-permission",
+      middleware: [AuthForAdmin],
+    });
   }
 
   public async GetAllCalls(req: Request, res: Response) {
@@ -244,8 +256,76 @@ export class WebsiteController implements IController {
       );
 
       return Ok(res, {
-        message: `User ${!isCurrentlyBlocked ? 'blocked' : 'unblocked'} successfully`,
-        user: updatedUser
+        message: `User ${isCurrentlyBlocked ? 'unblocked' : 'blocked'} successfully`,
+        user: updatedUser,
+      });
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async GrantBlogPermission(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return UnAuthorized(res, "User ID is required");
+      }
+
+      const user = await User.findById(id);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      if (user.acType !== 'USER') {
+        return UnAuthorized(res, "Blog permissions can only be granted to regular users");
+      }
+
+      if (user.canWriteBlog) {
+        return UnAuthorized(res, "User already has blog writing permissions");
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(
+        id,
+        { $set: { canWriteBlog: true } },
+        { new: true }
+      );
+
+      return Ok(res, {
+        message: "Blog writing permission granted successfully",
+        user: updatedUser,
+      });
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async RevokeBlogPermission(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return UnAuthorized(res, "User ID is required");
+      }
+
+      const user = await User.findById(id);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      if (!user.canWriteBlog) {
+        return UnAuthorized(res, "User doesn't have blog writing permissions");
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(
+        id,
+        { $set: { canWriteBlog: false } },
+        { new: true }
+      );
+
+      return Ok(res, {
+        message: "Blog writing permission revoked successfully",
+        user: updatedUser,
       });
     } catch (err) {
       return UnAuthorized(res, err);

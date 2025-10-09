@@ -99,6 +99,16 @@ export class BlogController implements IController {
         return UnAuthorized(res, "User authentication required");
       }
       
+      // Check if user has blog writing permissions
+      const user = await User.findById(userId);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+      
+      if (!user.canWriteBlog) {
+        return UnAuthorized(res, "You don't have permission to write blogs. Please contact admin for access.");
+      }
+      
       const blogData = {
         body,
         label,

@@ -37,7 +37,8 @@ const UserSchema = new mongoose.Schema<IUserProps>(
                     expiresAt: { type: mongoose.Schema.Types.Date },
                     verified: { type: mongoose.Schema.Types.Boolean, default: false }
                }
-          }
+          },
+          canWriteBlog: { type: mongoose.Schema.Types.Boolean, default: false }
      },
      {
           timestamps: true,

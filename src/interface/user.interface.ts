@@ -33,6 +33,7 @@ export interface IUserProps {
       verified: boolean;
     };
   };
+  canWriteBlog?: boolean;
 }
 
 export type UserAccountType = "USER" | "ADMIN" | "MENTOR";

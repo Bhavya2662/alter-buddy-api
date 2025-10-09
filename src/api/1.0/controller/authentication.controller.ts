@@ -67,6 +67,12 @@ export class AuthenticationController implements IController {
       path: "/admin/sign-in",
     });
     this.routes.push({
+      handler: this.AdminSignOut,
+      method: "PUT",
+      path: "/admin/sign-out",
+      middleware: [AuthForAdmin],
+    });
+    this.routes.push({
       handler: this.AdminTest,
       method: "GET",
       path: "/admin/test",
@@ -638,6 +644,27 @@ export class AuthenticationController implements IController {
   public async AdminTest(req: Request, res: Response) {
     console.log('AdminTest endpoint hit!');
     return Ok(res, { message: 'Admin test endpoint working' });
+  }
+
+  public async AdminSignOut(req: Request, res: Response) {
+    try {
+      const token = getTokenFromHeader(req);
+      res.removeHeader("authorization");
+      const verified = verifyToken(token);
+      
+      // Update admin online status to false
+      await User.findByIdAndUpdate(
+        { _id: verified.id },
+        { $set: { online: false } }
+      );
+      
+      // Clear the admin cookie
+      res.clearCookie('adminToken');
+      
+      return Ok(res, "Admin logged out successfully");
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
   }
 
   public async MentorTest(req: Request, res: Response) {
