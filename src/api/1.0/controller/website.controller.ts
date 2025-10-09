@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { IController, IControllerRoutes } from "../../../interface";
 import { AuthForAdmin } from "../../../middleware";
-import { Chat, User } from "../../../model";
+import { Chat, User, Mentor } from "../../../model";
 import { Ok, UnAuthorized } from "../../../utils";
 
 export class WebsiteController implements IController {
@@ -18,6 +18,18 @@ export class WebsiteController implements IController {
       handler: this.GetAllUsers,
       method: "GET",
       path: "/website/users",
+      middleware: [AuthForAdmin],
+    });
+    this.routes.push({
+      handler: this.GetAllUsers,
+      method: "GET",
+      path: "/user/all",
+      middleware: [AuthForAdmin],
+    });
+    this.routes.push({
+      handler: this.GetAllMentors,
+      method: "GET",
+      path: "/mentor/all",
       middleware: [AuthForAdmin],
     });
     this.routes.push({
@@ -99,6 +111,17 @@ export class WebsiteController implements IController {
     try {
       const users = await User.find().sort({ createdAt: -1 });
       return Ok(res, users);
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  public async GetAllMentors(req: Request, res: Response) {
+    try {
+      const mentors = await Mentor.find()
+        .sort({ createdAt: -1 })
+        .populate("category");
+      return Ok(res, mentors);
     } catch (err) {
       return UnAuthorized(res, err);
     }

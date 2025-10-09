@@ -78,6 +78,12 @@ export class AuthenticationController implements IController {
       path: "/admin/test",
     });
     this.routes.push({
+      handler: this.AdminDashboard,
+      method: "GET",
+      path: "/admin/dashboard",
+      middleware: [AuthForAdmin],
+    });
+    this.routes.push({
       handler: this.MentorTest,
       method: "GET",
       path: "/mentor/test",
@@ -644,6 +650,42 @@ export class AuthenticationController implements IController {
   public async AdminTest(req: Request, res: Response) {
     console.log('AdminTest endpoint hit!');
     return Ok(res, { message: 'Admin test endpoint working' });
+  }
+
+  public async AdminDashboard(req: Request, res: Response) {
+    try {
+      const token = getTokenFromHeader(req);
+      const verified = verifyToken(token);
+      
+      // Get dashboard statistics
+      const totalUsers = await User.countDocuments({ acType: 'USER' });
+      const totalMentors = await Mentor.countDocuments();
+      const activeUsers = await User.countDocuments({ acType: 'USER', online: true });
+      const activeMentors = await Mentor.countDocuments({ 'accountStatus.online': true });
+      const blockedUsers = await User.countDocuments({ acType: 'USER', block: true });
+      const deactivatedUsers = await User.countDocuments({ 'deactivation.isDeactivated': true });
+      
+      const dashboardData = {
+        users: {
+          total: totalUsers,
+          active: activeUsers,
+          blocked: blockedUsers,
+          deactivated: deactivatedUsers
+        },
+        mentors: {
+          total: totalMentors,
+          active: activeMentors
+        },
+        admin: {
+          id: verified.id,
+          email: verified.email
+        }
+      };
+      
+      return Ok(res, dashboardData);
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
   }
 
   public async AdminSignOut(req: Request, res: Response) {
