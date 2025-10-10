@@ -253,12 +253,13 @@ export class AuthenticationController implements IController {
     try {
       console.log('=== UserSignUp method called ===');
       console.log('Request body:', req.body);
-      const { email, password, name }: {
+      const { email, password, name, mobile }: {
         email: string;
         password: string;
         name: { firstName: string; lastName: string };
+        mobile?: string;
       } = req.body;
-      console.log('Extracted fields:', { email, password: password ? 'present' : 'missing', name });
+      console.log('Extracted fields:', { email, password: password ? 'present' : 'missing', name, mobile });
 
       if (!email || !password || !name) {
         console.log('Missing fields detected:', { email: !!email, password: !!password, name: !!name });
@@ -279,6 +280,7 @@ export class AuthenticationController implements IController {
         acType: "USER",
         block: false,
         email: email,
+        mobile: mobile,
         online: false,
         password: hashed,
         verified: false,
