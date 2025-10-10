@@ -550,7 +550,7 @@ export class AuthenticationController implements IController {
         data: {
           token,
           user: {
-            id: mentor._id,
+            _id: mentor._id,
             email: mentor.contact.email,
             name: mentor.name,
             role: 'mentor'
