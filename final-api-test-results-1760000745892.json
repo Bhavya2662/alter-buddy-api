@@ -1,0 +1,296 @@
+[
+  {
+    "name": "Admin Login",
+    "path": "/api/1.0/admin/sign-in",
+    "method": "PUT",
+    "status": 200,
+    "expectedStatus": 200,
+    "success": true,
+    "data": {
+      "success": true,
+      "message": "Admin login successful",
+      "data": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmNjA0ZTVlNzE2ZmE1ZWViNDhiMCIsImVtYWlsIjoiYWRtaW5AYWx0ZXJidWRkeS5jb20iLCJyb2xlIjoiQURNSU4iLCJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3NjAwMDA3NDAsImV4cCI6MTc2MjU5Mjc0MH0.9I1IwkJCiBhnQzqpG9efFWO6WW2diRSa8cVrJqfK6oc",
+        "user": {
+          "id": "68a2f604e5e716fa5eeb48b0",
+          "email": "admin@alterbuddy.com",
+          "name": {
+            "firstName": "Admin",
+            "lastName": "User"
+          },
+          "role": "ADMIN"
+        }
+      }
+    },
+    "timestamp": "2025-10-09T09:05:40.850Z"
+  },
+  {
+    "name": "Get All Categories",
+    "path": "/api/1.0/category",
+    "method": "GET",
+    "status": 200,
+    "expectedStatus": 200,
+    "success": true,
+    "data": {
+      "success": true,
+      "data": [
+        {
+          "_id": "6839863e12dc335fec5b873b",
+          "title": "Past Life Regression",
+          "status": true,
+          "createdAt": "2025-05-30T10:19:42.594Z",
+          "updatedAt": "2025-08-13T14:06:11.888Z",
+          "__v": 0
+        },
+        {
+          "_id": "6839863312dc335fec5b8733",
+          "title": "Automatic Writing",
+          "status": true,
+          "createdAt": "2025-05-30T10:19:31.658Z",
+          "updatedAt": "2025-05-30T10:19:31.658Z",
+          "__v": 0
+        },
+        {
+          "_id": "6839862612dc335fec5b872d",
+          "title": "Tarot Reading",
+          "status": true,
+          "createdAt": "2025-05-30T10:19:18.854Z",
+          "updatedAt": "2025-05-30T10:19:18.854Z",
+          "__v": 0
+        },
+        {
+          "_id": "683985d912dc335fec5b86ff",
+          "title": "Akashic Records",
+          "status": true,
+          "createdAt": "2025-05-30T10:18:01.282Z",
+          "updatedAt": "2025-05-30T10:18:01.282Z",
+          "__v": 0
+        },
+        {
+          "_id": "68075af6de692f1dfe30c5da",
+          "title": "Energy Healing for Pets",
+          "status": true,
+          "createdAt": "2025-04-22T09:01:42.020Z",
+          "updatedAt": "2025-04-22T09:01:42.020Z",
+          "__v": 0
+        },
+        {
+          "_id": "680747dcde692f1dfe30c586",
+          "title": "Energy Work",
+          "status": true,
+          "createdAt": "2025-04-22T07:40:12.755Z",
+          "updatedAt": "2025-04-22T07:40:12.755Z",
+          "__v": 0
+        },
+        {
+          "_id": "6800e8f5b0def0e74ae1bd52",
+          "title": "Dating & Relationship",
+          "status": true,
+          "createdAt": "2025-04-17T11:41:41.729Z",
+          "updatedAt": "2025-04-17T11:41:41.729Z",
+          "__v": 0
+        },
+        {
+          "_id": "6800e8e5b0def0e74ae1bd4d",
+          "title": "RANT",
+          "status": true,
+          "createdAt": "2025-04-17T11:41:25.521Z",
+          "updatedAt": "2025-04-17T11:41:25.521Z",
+          "__v": 0
+        },
+        {
+          "_id": "6800e8c6b0def0e74ae1bd48",
+          "title": "Healing",
+          "status": true,
+          "createdAt": "2025-04-17T11:40:54.272Z",
+          "updatedAt": "2025-04-17T11:40:54.272Z",
+          "__v": 0
+        },
+        {
+          "_id": "67f39e7a71662664c3028358",
+          "title": "Manifestation",
+          "status": true,
+          "createdAt": "2025-04-07T09:44:26.374Z",
+          "updatedAt": "2025-04-07T09:44:26.374Z",
+          "__v": 0
+        },
+        {
+          "_id": "67f39e6871662664c302834f",
+          "title": "Mental health",
+          "status": true,
+          "createdAt": "2025-04-07T09:44:08.965Z",
+          "updatedAt": "2025-04-07T09:44:08.965Z",
+          "__v": 0
+        },
+        {
+          "_id": "68a301eddf58e79c280a56c0",
+          "categoryName": "General Consultation",
+          "categoryDescription": "General consultation services",
+          "__v": 0
+        }
+      ],
+      "status_code": "Ok"
+    },
+    "timestamp": "2025-10-09T09:05:41.376Z"
+  },
+  {
+    "name": "Get Top Mentors",
+    "path": "/api/1.0/top-mentor",
+    "method": "GET",
+    "status": 200,
+    "expectedStatus": 200,
+    "success": true,
+    "data": {
+      "success": true,
+      "data": [],
+      "status_code": "Ok"
+    },
+    "timestamp": "2025-10-09T09:05:41.942Z"
+  },
+  {
+    "name": "Get All Posts",
+    "path": "/api/1.0/posts",
+    "method": "GET",
+    "status": 200,
+    "expectedStatus": 200,
+    "success": true,
+    "data": {
+      "success": true,
+      "data": [],
+      "status_code": "Ok"
+    },
+    "timestamp": "2025-10-09T09:05:42.465Z"
+  },
+  {
+    "name": "Get All Blogs",
+    "path": "/api/1.0/blog",
+    "method": "GET",
+    "status": 200,
+    "expectedStatus": 200,
+    "success": true,
+    "data": {
+      "success": true,
+      "data": [],
+      "status_code": "Ok"
+    },
+    "timestamp": "2025-10-09T09:05:42.990Z"
+  },
+  {
+    "name": "Admin Test Endpoint",
+    "path": "/api/1.0/admin/test",
+    "method": "GET",
+    "status": 200,
+    "expectedStatus": 200,
+    "success": true,
+    "data": {
+      "success": true,
+      "data": {
+        "message": "Admin test endpoint working"
+      },
+      "status_code": "Ok"
+    },
+    "timestamp": "2025-10-09T09:05:43.282Z"
+  },
+  {
+    "name": "User Signup (Test User Already Exists)",
+    "path": "/api/1.0/sign-up",
+    "method": "POST",
+    "status": 401,
+    "expectedStatus": 401,
+    "success": true,
+    "data": {
+      "success": false,
+      "status_code": 401,
+      "message": "user is already registered with this email"
+    },
+    "timestamp": "2025-10-09T09:05:43.803Z"
+  },
+  {
+    "name": "User Login (Invalid Credentials)",
+    "path": "/api/1.0/sign-in",
+    "method": "PUT",
+    "status": 401,
+    "expectedStatus": 401,
+    "success": true,
+    "data": {
+      "success": false,
+      "status_code": 401,
+      "message": "missing fields"
+    },
+    "timestamp": "2025-10-09T09:05:44.084Z"
+  },
+  {
+    "name": "Mentor Login (Invalid Credentials)",
+    "path": "/api/1.0/mentor/sign-in",
+    "method": "PUT",
+    "status": 401,
+    "expectedStatus": 401,
+    "success": true,
+    "data": {
+      "success": false,
+      "message": "Invalid mentor credentials"
+    },
+    "timestamp": "2025-10-09T09:05:44.648Z"
+  },
+  {
+    "name": "Get Ably Token (No Auth)",
+    "path": "/api/1.0/rant/ably/token",
+    "method": "GET",
+    "status": 401,
+    "expectedStatus": 401,
+    "success": true,
+    "data": {
+      "success": false,
+      "status_code": 401,
+      "message": {
+        "name": "JsonWebTokenError",
+        "message": "jwt must be provided"
+      }
+    },
+    "timestamp": "2025-10-09T09:05:44.923Z"
+  },
+  {
+    "name": "Get Stream Token (No Auth)",
+    "path": "/api/1.0/rant/get-stream/token",
+    "method": "GET",
+    "status": 401,
+    "expectedStatus": 401,
+    "success": true,
+    "data": {
+      "success": false,
+      "status_code": 401,
+      "message": {
+        "name": "JsonWebTokenError",
+        "message": "jwt must be provided"
+      }
+    },
+    "timestamp": "2025-10-09T09:05:45.318Z"
+  },
+  {
+    "name": "Mentor Test (No Auth)",
+    "path": "/api/1.0/mentor/test",
+    "method": "GET",
+    "status": 401,
+    "expectedStatus": 401,
+    "success": true,
+    "data": {
+      "success": false,
+      "message": "Access denied. No token provided."
+    },
+    "timestamp": "2025-10-09T09:05:45.608Z"
+  },
+  {
+    "name": "Get All Template Packages",
+    "path": "/api/1.0/session/packages/all",
+    "method": "GET",
+    "status": 400,
+    "expectedStatus": 400,
+    "success": true,
+    "data": {
+      "success": false,
+      "status_code": 400,
+      "message": "please login"
+    },
+    "timestamp": "2025-10-09T09:05:45.891Z"
+  }
+]

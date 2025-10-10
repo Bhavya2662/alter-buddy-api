@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-10-09T07:44:39.149Z",
+  "tests": [
+    {
+      "test": "Valid Admin Login (API)",
+      "status": "passed",
+      "message": "Login successful with token: eyJhbGciOiJIUzI1NiIs...",
+      "error": null,
+      "timestamp": "2025-10-09T07:44:39.882Z"
+    },
+    {
+      "test": "Authenticated Request",
+      "status": "passed",
+      "message": "Profile fetch successful for: Admin",
+      "error": null,
+      "timestamp": "2025-10-09T07:44:40.395Z"
+    },
+    {
+      "test": "Invalid Admin Login (API)",
+      "status": "passed",
+      "message": "Correctly rejected invalid credentials with status 401",
+      "error": null,
+      "timestamp": "2025-10-09T07:44:40.896Z"
+    },
+    {
+      "test": "Admin Panel Access",
+      "status": "passed",
+      "message": "Admin panel loads successfully (200)",
+      "error": null,
+      "timestamp": "2025-10-09T07:44:41.289Z"
+    },
+    {
+      "test": "Missing Email Field",
+      "status": "passed",
+      "message": "Correctly rejected request with missing email field",
+      "error": null,
+      "timestamp": "2025-10-09T07:44:41.583Z"
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "successRate": 100
+  }
+}
