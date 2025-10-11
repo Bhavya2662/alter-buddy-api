@@ -26,7 +26,7 @@ export class OTPService {
         },
       });
 
-      // Send email
+      // Send email with timeout and better error handling
       const transporter = Nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: 587,
@@ -38,10 +38,13 @@ export class OTPService {
         tls: {
           rejectUnauthorized: true,
         },
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 5000,    // 5 seconds
+        socketTimeout: 10000,     // 10 seconds
       });
 
       const mailOptions: SendMailOptions = {
-        from: "alterbuddy8@gmail.com",
+        from: process.env.SMTP_FROM || "alterbuddy8@gmail.com",
         to: email,
         subject: "AlterBuddy - Email Verification OTP",
         html: `
@@ -81,11 +84,25 @@ export class OTPService {
         `,
       };
 
-      await transporter.sendMail(mailOptions);
+      // Add timeout wrapper for email sending
+      const emailPromise = transporter.sendMail(mailOptions);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Email sending timeout')), 15000); // 15 second timeout
+      });
+
+      await Promise.race([emailPromise, timeoutPromise]);
+      console.log(`Email OTP sent successfully to ${email}`);
       return { success: true, message: "Email OTP sent successfully" };
     } catch (error) {
       console.error("Error sending email OTP:", error);
-      return { success: false, message: "Failed to send email OTP" };
+      // Return success even if email fails, so signup doesn't hang
+      // The OTP is already saved in the database
+      return { 
+        success: false, 
+        message: error instanceof Error && error.message.includes('timeout') 
+          ? "Email service temporarily unavailable. Please try resending OTP." 
+          : "Failed to send email OTP. Please try resending OTP."
+      };
     }
   }
 
@@ -143,10 +160,11 @@ export class OTPService {
         return { success: false, message: "Invalid OTP" };
       }
 
-      // Mark email as verified
+      // Mark email as verified and set main verified field
       await User.findByIdAndUpdate(userId, {
         $set: {
           "otp.email.verified": true,
+          "verified": true,
         },
       });
 
