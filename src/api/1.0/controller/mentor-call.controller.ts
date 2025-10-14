@@ -139,7 +139,8 @@ export class MentorCallSchedule implements IController {
     try {
       const token = getTokenFromHeader(req);
       const id = verifyToken(token);
-      const calls = await Chat.find({ "users.mentor": id.id })
+      const mentorObjectId = new mongoose.Types.ObjectId(id.id);
+      const calls = await Chat.find({ "users.mentor": mentorObjectId })
         .populate("users.mentor")
         .populate("users.user")
         .populate("packageId");
@@ -153,7 +154,8 @@ export class MentorCallSchedule implements IController {
     try {
       const token = getTokenFromHeader(req);
       const id = verifyToken(token);
-      const calls = await Chat.find({ "users.user": id.id })
+      const userObjectId = new mongoose.Types.ObjectId(id.id);
+      const calls = await Chat.find({ "users.user": userObjectId })
         .sort({ createdAt: -1 })
         .populate("users.mentor")
         .populate("users.user")
@@ -361,6 +363,25 @@ export class MentorCallSchedule implements IController {
         return UnAuthorized(res, "User or Mentor not found.");
       }
 
+      // Validate slot existence and availability when booking a specific slot
+      if (type === "slot") {
+        const slotData = await CallSchedule.findOne({
+          mentorId: mentorId,
+          slots: { $elemMatch: { _id: new mongoose.Types.ObjectId(slotId) } },
+        }).lean();
+
+        if (!slotData) {
+          return UnAuthorized(res, "Slot not found.");
+        }
+        const slot = slotData.slots.find((s) => String(s._id) === String(slotId));
+        if (!slot) {
+          return UnAuthorized(res, "Slot not found.");
+        }
+        if (slot.booked) {
+          return UnAuthorized(res, "Slot already booked or unavailable.");
+        }
+      }
+
       // Check if using session package or regular pricing
       let sessionPackage = null;
       let totalCost = 0;
@@ -452,6 +473,15 @@ export class MentorCallSchedule implements IController {
           });
           
           paymentMethod = 'wallet';
+          
+          // Persist package changes (remainingSessions decrement and status)
+          try {
+            await sessionPackage.save();
+            console.log('DEBUG: Last session package saved successfully');
+          } catch (saveError) {
+            console.log('DEBUG: Error saving session package on last session:', saveError);
+            return UnAuthorized(res, 'Failed to update session package');
+          }
           
           // Create 1-week chat support after last package session
           console.log('DEBUG: Creating 1-week chat support after last package session');
@@ -632,7 +662,6 @@ export class MentorCallSchedule implements IController {
           console.log('DEBUG: Mutual discussion session - no charge applied');
           totalCost = 0;
           paymentMethod = 'package';
-        }
         
         // Save the updated session package
         try {
@@ -643,7 +672,9 @@ export class MentorCallSchedule implements IController {
           console.log('DEBUG: Error saving session package:', saveError);
           return UnAuthorized(res, 'Failed to update session package');
         }
-      } else {
+      }
+      }
+      else {
         // Regular wallet-based payment
         console.log('DEBUG: Looking for regular package with:', { packageType: callType, mentorId: mentor._id });
         const packages = await Packages.findOne({
@@ -720,7 +751,7 @@ export class MentorCallSchedule implements IController {
       console.log("DEBUG: Finished payment processing, proceeding to slot booking...");
       if (type === "slot") {
         await CallSchedule.updateOne(
-          { slots: { $elemMatch: { _id: slotId } } },
+          { mentorId: mentorId, slots: { $elemMatch: { _id: slotId } } },
           {
             $set: {
               "slots.$.booked": true,
@@ -736,101 +767,191 @@ export class MentorCallSchedule implements IController {
       let hostJoinURL: string | undefined;
       let guestJoinURL: string | undefined;
       let roomId: string = generateRandomRoomId();
+      const durationMinutes = parseInt(time);
+      const startTime = new Date();
+      const endTime = new Date(startTime.getTime() + durationMinutes * 60000);
+      let chat: any;
 
       console.log("DEBUG: About to start room creation process for callType:", callType);
       if (callType === "audio" || callType === "video") {
-        console.log("=== 100MS API DEBUG START ===");
-        console.log("Creating room for callType:", callType);
-        console.log("Template ID:", callType === "video" ? process.env.REACT_APP_100MD_SDK_VIDEO_TEMPLATE : process.env.REACT_APP_100MD_SDK_AUDIO_TEMPLATE);
-        console.log("Token present:", !!process.env.REACT_APP_100MD_SDK_TOKEN);
-        console.log("About to make 100ms API call...");
-        
-        const roomResponse = await axios.post(
-          "https://api.100ms.live/v2/rooms",
-          {
-            name: `slot-booking-${Date.now()}`,
-            description: "Mentorship Session",
-            template_id:
-              callType === "video"
-                ? process.env.REACT_APP_100MD_SDK_VIDEO_TEMPLATE
-                : process.env.REACT_APP_100MD_SDK_AUDIO_TEMPLATE,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
-              "Content-Type": "application/json",
+        try {
+          console.log("=== 100MS API DEBUG START ===");
+          console.log("Creating room for callType:", callType);
+          console.log("Template ID:", callType === "video" ? process.env.REACT_APP_100MD_SDK_VIDEO_TEMPLATE : process.env.REACT_APP_100MD_SDK_AUDIO_TEMPLATE);
+          console.log("Token present:", !!process.env.REACT_APP_100MD_SDK_TOKEN);
+          console.log("About to make 100ms API call...");
+          
+          const roomResponse = await axios.post(
+            "https://api.100ms.live/v2/rooms",
+            {
+              name: `slot-booking-${Date.now()}`,
+              description: "Mentorship Session",
+              template_id:
+                callType === "video"
+                  ? process.env.REACT_APP_100MD_SDK_VIDEO_TEMPLATE
+                  : process.env.REACT_APP_100MD_SDK_AUDIO_TEMPLATE,
             },
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          
+          console.log("Room created successfully:", roomResponse.data.id);
+          console.log("=== 100MS API DEBUG END ===");
+  
+          roomId = roomResponse.data.id || roomId;
+  
+          const [hostCodeRes, guestCodeRes] = await Promise.all([
+            axios.post(
+              `https://api.100ms.live/v2/room-codes/room/${roomId}/role/host`,
+              {},
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
+                },
+              }
+            ),
+            axios.post(
+              `https://api.100ms.live/v2/room-codes/room/${roomId}/role/guest`,
+              {},
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
+                },
+              }
+            ),
+          ]);
+  
+          const baseURL =
+            callType === "video"
+              ? process.env.REACT_APP_100MD_SDK_VIDEO_URL
+              : process.env.REACT_APP_100MD_SDK_AUDIO_URL;
+  
+          if (baseURL) {
+            hostJoinURL = `https://${baseURL}.app.100ms.live/meeting/${hostCodeRes.data.code}`;
+            guestJoinURL = `https://${baseURL}.app.100ms.live/meeting/${guestCodeRes.data.code}`;
+          } else {
+            // Fallback: generate local links if baseURL envs are not configured
+            const frontendUrl = process.env.FRONTEND_URL || "https://alterbuddy.com";
+            const basePath = callType === "video" ? "video" : "audio";
+            hostJoinURL = `${frontendUrl}/user/${basePath}/${mentor._id}/${roomId}`;
+            guestJoinURL = hostJoinURL;
           }
-        );
+        } catch (roomErr) {
+          console.error("100MS room creation failed:", roomErr?.response?.data || roomErr.message);
+          // Fallback: generate local links so booking does not fail
+          const frontendUrl = process.env.FRONTEND_URL || "https://alterbuddy.com";
+          const basePath = callType === "video" ? "video" : "audio";
+          hostJoinURL = `${frontendUrl}/user/${basePath}/${mentor._id}/${roomId}`;
+          guestJoinURL = `${frontendUrl}/user/${basePath}/${mentor._id}/${roomId}`;
+        }
+
+        // Create chat session and respond for audio/video bookings
+        const avChatData: any = {
+          users: {
+            user: userId,
+            mentor: mentorId,
+          },
+          sessionDetails: {
+            roomId,
+            roomCode: {
+              host: hostJoinURL ? hostJoinURL.split("/").pop() : undefined,
+              mentor: guestJoinURL ? guestJoinURL.split("/").pop() : undefined,
+            },
+            roomName: `Session-${Date.now()}`,
+            callType,
+            duration: String(durationMinutes),
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            recordingId: null,
+            recordingUrl: null,
+          },
+          status: "PENDING",
+          isAnonymous: false,
+        };
+        const avChat = await Chat.create(avChatData);
+
+        // Create mentor wallet transaction only when there's actual payment (totalCost > 0)
+        if (totalCost > 0) {
+          const totalAmount = totalCost;
+          const mentorShare = totalAmount * 0.7;
+          const adminShare = totalAmount * 0.3;
+
+          await MentorWallet.create({
+            userId,
+            mentorId,
+            slotId: type === "slot" ? slotId : undefined,
+            amount: totalAmount,
+            mentorShare,
+            adminShare,
+            type: "credit",
+            status: "confirmed",
+            description: packageId ? "User booked final package session" : "User booked a mentor session",
+            sessionDetails: {
+              duration: parseInt(time),
+              callType: callType,
+              sessionDate: startTime,
+              sessionTime: moment(startTime).format("hh:mm A"),
+              bookingType: type === "slot" ? "slot" : "instant",
+            },
+          });
+        }
+
+        if (type === "slot") {
+          return Ok(res, {
+            message: "Slot booked; pending mentor confirmation",
+            booking: {
+              slotId,
+              mentorId,
+              userId,
+              callType,
+              time: parseInt(time)
+            },
+            room: {
+              roomId,
+              hostJoinURL,
+              guestJoinURL
+            },
+            payment: {
+              method: paymentMethod,
+              amount: totalCost,
+              transactionId
+            },
+            slotStatus: "pending",
+            joinLink: guestJoinURL
+          });
+        }
+
+        return Ok(res, {
+          message: "Session booked successfully",
+          sessionId: avChat._id,
+          room: {
+            roomId,
+            hostJoinURL,
+            guestJoinURL
+          },
+          payment: {
+            method: paymentMethod,
+            amount: totalCost,
+            transactionId
+          },
+          joinLink: guestJoinURL
+        });
         
-        console.log("Room created successfully:", roomResponse.data.id);
-        console.log("=== 100MS API DEBUG END ===");
-
-        roomId = roomResponse.data.id || roomId;
-
-        const [hostCodeRes, guestCodeRes] = await Promise.all([
-          axios.post(
-            `https://api.100ms.live/v2/room-codes/room/${roomId}/role/host`,
-            {},
-            {
-              headers: {
-                Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
-              },
-            }
-          ),
-          axios.post(
-            `https://api.100ms.live/v2/room-codes/room/${roomId}/role/guest`,
-            {},
-            {
-              headers: {
-                Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
-              },
-            }
-          ),
-        ]);
-
-        const baseURL =
-          callType === "video"
-            ? process.env.REACT_APP_100MD_SDK_VIDEO_URL
-            : process.env.REACT_APP_100MD_SDK_AUDIO_URL;
-
-        hostJoinURL = `https://${baseURL}.app.100ms.live/meeting/${hostCodeRes.data.code}`;
-        guestJoinURL = `https://${baseURL}.app.100ms.live/meeting/${guestCodeRes.data.code}`;
       } else {
         const frontendUrl = process.env.FRONTEND_URL || "https://alterbuddy.com";
-        guestJoinURL = `${frontendUrl}/user/chat/${mentor._id}/${roomId}`;
         hostJoinURL = `${frontendUrl}/user/chat/${mentor._id}/${roomId}`;
-      }
-      const startTime = new Date();
-      const endTime = new Date(startTime.getTime() + parseInt(time) * 60000); // Add minutes in milliseconds
+        hostJoinURL = hostJoinURL;
+        if (callType === 'audio' || callType === 'video') {
+          const basePath = callType === 'video' ? 'video' : 'audio';
+          hostJoinURL = `${frontendUrl}/user/${basePath}/${mentor._id}/${roomId}`;
+          guestJoinURL = hostJoinURL;
+        }
 
-      // Create mentor wallet transaction only when there's actual payment (totalCost > 0)
-      if (totalCost > 0) {
-        const totalAmount = totalCost;
-        const mentorShare = totalAmount * 0.7;
-        const adminShare = totalAmount * 0.3;
-
-        await MentorWallet.create({
-          userId,
-          mentorId,
-          slotId: type === "slot" ? slotId : undefined,
-          amount: totalAmount,
-          mentorShare,
-          adminShare,
-          type: "credit", // Changed to credit since mentor receives payment
-          status: "confirmed",
-          description: packageId ? "User booked final package session" : "User booked a mentor session",
-          sessionDetails: {
-            duration: parseInt(time),
-            callType: callType,
-            sessionDate: startTime,
-            sessionTime: moment(startTime).format("hh:mm A"),
-            bookingType: type === "slot" ? "slot" : "instant",
-          },
-        });
-      }
-
-      if (type != "slot") {
+        // using durationMinutes/startTime/endTime defined above
         const chatData: any = {
           users: {
             user: userId,
@@ -844,749 +965,589 @@ export class MentorCallSchedule implements IController {
             },
             roomName: `Session-${Date.now()}`,
             callType,
-            duration: parseInt(time).toString(), // Store as string number for consistency
-            startTime,
-            endTime,
+            duration: String(durationMinutes),
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
             recordingId: null,
             recordingUrl: null,
           },
           status: "PENDING",
+          isAnonymous: false,
         };
-        
-        // Add packageId if this is a package session
-        if (packageId) {
-          chatData.packageId = packageId;
+        const chat = await Chat.create(chatData);
+
+        // Create mentor wallet transaction only when there's actual payment (totalCost > 0)
+        if (totalCost > 0) {
+          const totalAmount = totalCost;
+          const mentorShare = totalAmount * 0.7;
+          const adminShare = totalAmount * 0.3;
+
+          await MentorWallet.create({
+            userId,
+            mentorId,
+            slotId: type === "slot" ? slotId : undefined,
+            amount: totalAmount,
+            mentorShare,
+            adminShare,
+            type: "credit", // Changed to credit since mentor receives payment
+            status: "confirmed",
+            description: packageId ? "User booked final package session" : "User booked a mentor session",
+            sessionDetails: {
+              duration: parseInt(time),
+              callType: callType,
+              sessionDate: startTime,
+              sessionTime: moment(startTime).format("hh:mm A"),
+              bookingType: type === "slot" ? "slot" : "instant",
+            },
+          });
         }
-        
-        await Chat.create(chatData);
 
-        // Send emails asynchronously without blocking the booking process
-        const sendEmails = async () => {
-          try {
-            const transporter = nodemailer.createTransport({
-              host: process.env.SMTP_HOST,
-              port: 587,
-              secure: false,
-              auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
+        // For slot bookings, respond immediately and let mentor confirm later
+        if (type === "slot") {
+          return Ok(res, {
+            message: "Slot booked; pending mentor confirmation",
+            booking: {
+              slotId,
+              mentorId,
+              userId,
+              callType,
+              time: parseInt(time)
+            },
+            room: {
+              roomId,
+              hostJoinURL,
+              guestJoinURL
+            },
+            payment: {
+              method: paymentMethod,
+              amount: totalCost,
+              transactionId
+            },
+            slotStatus: "pending"
+          });
+        }
+
+        if (type != "slot") {
+          const chatData: any = {
+            users: {
+              user: userId,
+              mentor: mentorId,
+            },
+            sessionDetails: {
+              roomId,
+              roomCode: {
+                host: hostJoinURL ? hostJoinURL.split("/").pop() : undefined,
+                mentor: guestJoinURL ? guestJoinURL.split("/").pop() : undefined,
               },
-              tls: { rejectUnauthorized: true },
-            });
+              roomName: `Session-${Date.now()}`,
+              callType,
+              duration: parseInt(time).toString(), // Store as string number for consistency
+              startTime,
+              endTime,
+              recordingId: null,
+              recordingUrl: null,
+            },
+            status: "PENDING",
+          };
+          
+          // Add packageId if this is a package session
+          if (packageId) {
+            chatData.packageId = packageId;
+          }
+          
+          const chat = await Chat.create(chatData);
 
-            // --- Send Email to USER ---
-            const userMailOptions = {
-              from: process.env.SMTP_FROM,
-              to: user.email,
-              subject: "Your Mentor Slot Has Been Confirmed!",
-              html: `
-                <!DOCTYPE html>
-                <html>
-                  <head>
+          // Send emails asynchronously without blocking the booking process
+          const sendEmails = async () => {
+            const transporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST,
+                port: 587,
+                secure: false,
+                auth: {
+                  user: process.env.SMTP_USER,
+                  pass: process.env.SMTP_PASS,
+                },
+                tls: { rejectUnauthorized: true },
+              });
+
+              // --- Send Email to USER ---
+              const userMailOptions = {
+                from: process.env.SMTP_FROM,
+                to: user.email,
+                subject: "Your Mentor Slot Has Been Confirmed!",
+                html: `
+                  <!DOCTYPE html>
+                  <html>
+                    <head>
+                      <meta charset="UTF-8" />
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                      <title>Slot Confirmation</title>
+                      <style>
+                        body {
+                          font-family: Arial, sans-serif;
+                          background-color: #f4f4f4;
+                          margin: 0;
+                          padding: 20px;
+                        }
+                        .email-container {
+                          max-width: 600px;
+                          margin: 0 auto;
+                          background-color: #ffffff;
+                          padding: 20px;
+                          border-radius: 5px;
+                          box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                        }
+                        .email-header {
+                          text-align: center;
+                          background-color: #4caf50;
+                          padding: 20px;
+                          color: #ffffff;
+                          border-radius: 5px 5px 0 0;
+                        }
+                        .email-body {
+                          padding: 20px;
+                          color: #333333;
+                        }
+                        .join-button {
+                          display: inline-block;
+                          padding: 15px 25px;
+                          background-color: #4caf50;
+                          color: #ffffff;
+                          text-decoration: none;
+                          border-radius: 5px;
+                          margin: 20px 0;
+                        }
+                        .join-button:hover {
+                          background-color: #45a049;
+                        }
+                        .email-footer {
+                          text-align: center;
+                          font-size: 12px;
+                          color: #999999;
+                          margin-top: 20px;
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="email-container">
+                        <div class="email-header">
+                          <h1>Slot Confirmation</h1>
+                        </div>
+                        <div class="email-body">
+                          <p>Hi ${user.name.firstName} ${user.name.lastName},</p>
+                          <p>Your mentor <strong>${mentor.name.firstName} ${mentor.name.lastName}</strong> has confirmed your session!</p>
+                          <p>Click below to join your session:</p>
+                          <p style="text-align: center;">
+                            <a href="${guestJoinURL}" class="join-button">Join Session</a>
+                          </p>
+                          <p>If you have any questions, please contact support.</p>
+                          <p>Thank you!</p>
+                        </div>
+                        <div class="email-footer">
+                          <p>&copy; 2025 Alter Buddy. All rights reserved.</p>
+                        </div>
+                      </div>
+                    </body>
+                  </html>
+                `,
+              };
+              try {
+                await transporter.sendMail(userMailOptions);
+              } catch (mailErr) {
+                console.error("USER email send failed:", (mailErr as any)?.message || mailErr);
+                // Do not fail confirmation due to email issues
+              }
+
+              // --- Send Email to MENTOR ---
+              const mentorMailOptions = {
+                from: process.env.SMTP_FROM,
+                to: mentor.contact.email,
+                subject: "New Mentorship Session Booked!",
+                html: `
+                  <!DOCTYPE html>
+                    <html>
+                    <head>
                     <meta charset="UTF-8" />
                     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                     <title>Slot Confirmation</title>
                     <style>
-                      body {
-                        font-family: Arial, sans-serif;
-                        background-color: #f4f4f4;
-                        margin: 0;
-                        padding: 20px;
-                      }
-                      .email-container {
-                        max-width: 600px;
-                        margin: 0 auto;
-                        background-color: #ffffff;
-                        padding: 20px;
-                        border-radius: 5px;
-                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-                      }
-                      .email-header {
-                        text-align: center;
-                        background-color: #4caf50;
-                        padding: 20px;
-                        color: #ffffff;
-                        border-radius: 5px 5px 0 0;
-                      }
-                      .email-body {
-                        padding: 20px;
-                        color: #333333;
-                      }
-                      .join-button {
-                        display: inline-block;
-                        padding: 15px 25px;
-                        background-color: #4caf50;
-                        color: #ffffff;
-                        text-decoration: none;
-                        border-radius: 5px;
-                        margin: 20px 0;
-                      }
-                      .join-button:hover {
-                        background-color: #45a049;
-                      }
-                      .email-footer {
-                        text-align: center;
-                        font-size: 12px;
-                        color: #999999;
-                        margin-top: 20px;
-                      }
-                    </style>
-                  </head>
-                  <body>
-                    <div class="email-container">
-                      <div class="email-header">
-                        <h1>Slot Confirmation</h1>
-                      </div>
-                      <div class="email-body">
-                        <p>Hi ${user.name.firstName} ${user.name.lastName},</p>
-                        <p>Your mentor <strong>${mentor.name.firstName} ${mentor.name.lastName}</strong> has confirmed your session!</p>
-                        <p>Click below to join your session:</p>
-                        <p style="text-align: center;">
-                          <a href="${guestJoinURL}" class="join-button">Join Session</a>
-                        </p>
-                        <p>If you have any questions, please contact support.</p>
-                        <p>Thank you!</p>
-                      </div>
-                      <div class="email-footer">
-                        <p>&copy; 2025 Alter Buddy. All rights reserved.</p>
-                      </div>
-                    </div>
-                  </body>
-                </html>
-              `,
-            };
-            await transporter.sendMail(userMailOptions);
-
-            // --- Send Email to MENTOR ---
-            const mentorMailOptions = {
-              from: process.env.SMTP_FROM,
-              to: mentor.contact.email,
-              subject: "New Mentorship Session Booked!",
-              html: `
-                <!DOCTYPE html>
-                  <html>
-                  <head>
-                  <meta charset="UTF-8" />
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                  <title>Slot Confirmation</title>
-                  <style>
                     body {
-                      font-family: Arial, sans-serif;
-                      background-color: #f4f4f4;
-                      margin: 0;
-                      padding: 20px;
+                    font-family: Arial, sans-serif;
+                    background-color: #f4f4f4;
+                    margin: 0;
+                    padding: 20px;
                     }
                     .email-container {
-                      max-width: 600px;
-                      margin: 0 auto;
-                      background-color: #ffffff;
-                      padding: 20px;
-                      border-radius: 5px;
-                      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background-color: #ffffff;
+                    padding: 20px;
+                    border-radius: 5px;
+                    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
                     }
                     .email-header {
-                      text-align: center;
-                      background-color: #4caf50;
-                      padding: 20px;
-                      color: #ffffff;
-                      border-radius: 5px 5px 0 0;
+                    text-align: center;
+                    background-color: #4caf50;
+                    padding: 20px;
+                    color: #ffffff;
+                    border-radius: 5px 5px 0 0;
                     }
                     .email-body {
-                      padding: 20px;
-                      color: #333333;
+                    padding: 20px;
+                    color: #333333;
                     }
                     .join-button {
-                      display: inline-block;
-                      padding: 15px 25px;
-                      background-color: #4caf50;
-                      color: #ffffff;
-                      text-decoration: none;
-                      border-radius: 5px;
-                      margin: 20px 0;
+                    display: inline-block;
+                    padding: 15px 25px;
+                    background-color: #4caf50;
+                    color: #ffffff;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    margin: 20px 0;
                     }
                     .join-button:hover {
-                      background-color: #45a049;
+                    background-color: #45a049;
                     }
                     .email-footer {
-                      text-align: center;
-                      font-size: 12px;
-                      color: #999999;
-                      margin-top: 20px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #999999;
+                    margin-top: 20px;
                     }
-                  </style>
-                </head>
-                <body>
-                  <div class="email-container">
+                    </style>
+                    </head>
+                    <body>
+                    <div class="email-container">
                     <div class="email-header">
-                      <h1>Slot Confirmation</h1>
+                    <h1>Slot Confirmation</h1>
                     </div>
                     <div class="email-body">
-                      <p>Hi ${mentor.name.firstName} ${mentor.name.lastName},</p>
-                      <p>A new mentorship session has been booked by <strong>${user.name.firstName} ${user.name.lastName}</strong>.</p>
-                      <p>Click below to join the session:</p>
-                      <p style="text-align: center;" >
-                        <a href="${hostJoinURL}" class="join-button" style="background: #45a049; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px;">Join as Mentor</a>
-                      </p>
-                      <p>If you have any issues, feel free to contact support.</p>
-                      <p>Thank you!</p>
+                    <p>Hi ${mentor.name.firstName} ${mentor.name.lastName},</p>
+                    <p>A new mentorship session has been booked by <strong>${user.name.firstName} ${user.name.lastName}</strong>.</p>
+                    <p>Click below to join the session:</p>
+                    <p style="text-align: center;" >
+                    <a href="${hostJoinURL}" class="join-button" style="background: #45a049; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px;">Join as Mentor</a>
+                    </p>
+                    <p>If you have any issues, feel free to contact support.</p>
+                    <p>Thank you!</p>
                     </div>
                     <div class="email-footer">
-                      <p>&copy; 2025 Alter Buddy. All rights reserved.</p>
+                    <p>&copy; 2025 Alter Buddy. All rights reserved.</p>
                     </div>
-                  </div>
-                </body>
-                </html>`,
-            };
-            await transporter.sendMail(mentorMailOptions);
-          } catch (emailError) {
-            console.error("Email sending failed:", emailError);
-            // Don't throw the error - just log it
-          }
-        };
-        
-        // Send emails asynchronously without waiting
-        sendEmails();
-      }
-
-      return Ok(res, {
-        message: `Hey! ${user.name.firstName} ${user.name.lastName}, your slot is booked with ${mentor.name.firstName} ${mentor.name.lastName}`,
-        link: guestJoinURL,
-        payment: {
-          amount: totalCost,
-          transactionId: transactionId || `BOOKING-${Date.now()}`,
-          paymentId: `BOOKING-${slotId || Date.now()}`,
-          status: 'success'
-        }
-      });
-    } catch (err) {
-      console.error("=== BOOKING ERROR DEBUG START ===");
-      console.error("Error in BookSlotByUserId:", err);
-      console.error("Error message:", err instanceof Error ? err.message : "Unknown error");
-      console.error("Error stack:", err instanceof Error ? err.stack : "No stack trace");
-      console.error("=== BOOKING ERROR DEBUG END ===");
-      return UnAuthorized(
-        res,
-        err instanceof Error ? err.message : "Unknown error occurred."
-      );
-    }
-  }
-
-  public async UpdateSlot(req: Request, res: Response) {
-    try {
-      const { slotId } = req.params;
-      if (!slotId) {
-        return UnAuthorized(res, "failed to update");
-      } else {
-        const updated = await CallSchedule.findOneAndUpdate(
-          {
-            slots: {
-              $elemMatch: {
-                _id: new mongoose.Types.ObjectId(slotId),
-              },
-            },
-          },
-          {
-            $set: {
-              "slots.$.note": req.body.note,
-            } as Partial<IMentorCallScheduleProps>,
-          },
-          { new: true }
-        );
-        return Ok(res, "slot updated");
-      }
-    } catch (err) {
-      return UnAuthorized(res, err);
-    }
-  }
-
-  public async ConfirmSlotByMentor(req: Request, res: Response) {
-    try {
-      const { slotId, mentorId, userId } = req.body;
-      if (!slotId || !mentorId || !userId) {
-        return UnAuthorized(res, "Not valid configs found");
-      }
-
-      const user = await User.findById(userId).lean();
-      const mentor = await Mentor.findById(mentorId).lean();
-      const slotData = await CallSchedule.findOne({
-        slots: { $elemMatch: { _id: slotId } },
-      }).lean();
-
-      if (!user || !mentor || !slotData) {
-        return UnAuthorized(res, "User, Mentor, or Slot not found.");
-      }
-      const slot = slotData.slots.find((s) => String(s._id) === slotId);
-      if (!slot) {
-        return UnAuthorized(res, "Slot not found in CallSchedule.");
-      }
-      let hostJoinURL: string | undefined;
-      let guestJoinURL: string | undefined;
-      let roomId: string = generateRandomRoomId();
-
-      const startTime = moment(
-        `${slotData.slotsDate} ${slot.time}`,
-        "YYYY-MM-DD hh:mm A"
-      );
-
-      const packages = await Packages.findOne({
-        packageType: slot?.callType,
-        mentorId: mentor._id,
-      }).lean();
-
-      const totalAmount = slot.duration * packages.price;
-      const mentorShare = totalAmount * 0.7;
-      const adminShare = totalAmount * 0.3;
-
-      await MentorWallet.create({
-        userId,
-        mentorId,
-        slotId,
-        amount: totalAmount,
-        mentorShare,
-        adminShare,
-        type: "credit",
-        status: "confirmed",
-        description: "Mentor confirmed session",
-        sessionDetails: {
-          duration: slot.duration,
-          callType: slot.callType,
-          sessionDate: startTime.toDate(),
-          sessionTime: startTime.format("hh:mm A"),
-          bookingType: "slot",
-        },
-      });
-
-      // Step 2: Create endTime
-      const roomResponse = await axios.post(
-        "https://api.100ms.live/v2/rooms",
-        {
-          name: `slot-booking-${Date.now()}`,
-          description: "Mentorship Session",
-          template_id:
-            slot.callType === "video"
-              ? process.env.REACT_APP_100MD_SDK_VIDEO_TEMPLATE
-              : process.env.REACT_APP_100MD_SDK_AUDIO_TEMPLATE,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      roomId = roomResponse.data.id || roomId;
-
-      const [hostCodeRes, guestCodeRes] = await Promise.all([
-        axios.post(
-          `https://api.100ms.live/v2/room-codes/room/${roomId}/role/host`,
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
-            },
-          }
-        ),
-        axios.post(
-          `https://api.100ms.live/v2/room-codes/room/${roomId}/role/guest`,
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
-            },
-          }
-        ),
-      ]);
-
-      const baseURL =
-        slot.callType === "video"
-          ? process.env.REACT_APP_100MD_SDK_VIDEO_URL
-          : process.env.REACT_APP_100MD_SDK_AUDIO_URL;
-
-      hostJoinURL = `https://${baseURL}.app.100ms.live/meeting/${hostCodeRes.data.code}`;
-      guestJoinURL = `https://${baseURL}.app.100ms.live/meeting/${guestCodeRes.data.code}`;
-      const endTime = startTime.clone().add(slot.duration, "minutes");
-
-      await Chat.create({
-        users: {
-          user: userId,
-          mentor: mentorId,
-        },
-        sessionDetails: {
-          roomId,
-          roomCode: {
-            host: hostJoinURL ? hostJoinURL.split("/").pop() : undefined,
-            mentor: guestJoinURL ? guestJoinURL.split("/").pop() : undefined,
-          },
-          roomName: `Session-${Date.now()}`,
-          callType: slot.callType,
-          duration: slot.duration.toString(), // Store as string number for consistency
-          startTime,
-          endTime,
-          recordingId: null,
-          recordingUrl: null,
-          recordingStatus: 'pending',
-        },
-        status: "PENDING",
-      });
-
-      const formattedDate = startTime.format("dddd, MMMM Do YYYY"); // e.g. Monday, June 10th 2025
-      const formattedTime = startTime.format("hh:mm A"); // e.g. 04:00 PM
-      const formattedDuration = `${slot.duration} minutes`; // e.g. 30 minutes
-
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: 587,
-        secure: false,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-        tls: { rejectUnauthorized: true },
-      });
-
-      // --- Send Email to USER ---
-
-      const userMailOptions = {
-        from: process.env.SMTP_FROM,
-        to: user.email,
-        subject: "Your Mentor Slot Has Been Confirmed!",
-        html: `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Session Confirmation</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            margin: 0;
-            padding: 0;
-          }
-          .container {
-            max-width: 600px;
-            margin: 30px auto;
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          }
-          .header {
-            background-color: #4caf50;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            border-radius: 8px 8px 0 0;
-          }
-          .content {
-            margin: 20px 0;
-            color: #333;
-          }
-          .join-button {
-            display: block;
-            width: fit-content;
-            margin: 20px auto;
-            padding: 15px 25px;
-            background-color: #4caf50;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-          }
-          .footer {
-            text-align: center;
-            font-size: 12px;
-            color: #999;
-            margin-top: 30px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Session Confirmed</h1>
-          </div>
-          <div class="content">
-            <p>Hi ${user.name.firstName} ${user.name.lastName},</p>
-            <p><strong>Your mentor ${mentor.name.firstName} ${mentor.name.lastName} has confirmed your session!</strong></p>
-            <p>🗓 <strong>Date:</strong> ${formattedDate}</p>
-            <p>⏰ <strong>Time:</strong> ${formattedTime}</p>
-            <p>⏳ <strong>Duration:</strong> ${formattedDuration}</p>
-            <a href="${guestJoinURL}" class="join-button">👉 Join Session</a>
-            <p>Please join 5 minutes before your scheduled time. Being late may reduce your available session time.</p>
-            <p>If you have any questions, feel free to contact our support team.</p>
-          </div>
-          <div class="footer">
-            <p>©️ 2025 AlterBuddy. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `,
-      };
-
-      await transporter.sendMail(userMailOptions);
-
-      // --- Send Email to MENTOR ---
-      const mentorMailOptions = {
-        from: process.env.SMTP_FROM,
-        to: mentor.contact.email,
-        subject: "New Mentorship Session Booked!",
-        html: `
-            <!DOCTYPE html>
-              <html>
-              <head>
-              <meta charset="UTF-8" />
-              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-              <title>Slot Confirmation</title>
-              <style>
-                body {
-                  font-family: Arial, sans-serif;
-                  background-color: #f4f4f4;
-                  margin: 0;
-                  padding: 20px;
-                }
-                .email-container {
-                  max-width: 600px;
-                  margin: 0 auto;
-                  background-color: #ffffff;
-                  padding: 20px;
-                  border-radius: 5px;
-                  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-                }
-                .email-header {
-                  text-align: center;
-                  background-color: #4caf50;
-                  padding: 20px;
-                  color: #ffffff;
-                  border-radius: 5px 5px 0 0;
-                }
-                .email-body {
-                  padding: 20px;
-                  color: #333333;
-                }
-                .join-button {
-                  display: inline-block;
-                  padding: 15px 25px;
-                  background-color: #4caf50;
-                  color: #ffffff;
-                  text-decoration: none;
-                  border-radius: 5px;
-                  margin: 20px 0;
-                }
-                .join-button:hover {
-                  background-color: #45a049;
-                }
-                .email-footer {
-                  text-align: center;
-                  font-size: 12px;
-                  color: #999999;
-                  margin-top: 20px;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="email-container">
-                <div class="email-header">
-                  <h1>Slot Confirmation</h1>
-                </div>
-                <div class="email-body">
-                  <p>Hi ${mentor.name.firstName} ${mentor.name.lastName},</p>
-                  <p>A new mentorship session has been booked by <strong>${user.name.firstName} ${user.name.lastName}</strong>.</p>
-                  <p>Click below to join the session:</p>
-                  <p style="text-align: center;" >
-                    <a href="${hostJoinURL}" class="join-button" style="background: #45a049; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px;">Join as Mentor</a>
-                  </p>
-                  <p>If you have any issues, feel free to contact support.</p>
-                  <p>Thank you!</p>
-                </div>
-                <div class="email-footer">
-                  <p>&copy; 2025 Alter Buddy. All rights reserved.</p>
-                </div>
-              </div>
-            </body>
-            </html>`,
-      };
-      await transporter.sendMail(mentorMailOptions);
-
-      // === Update Slot Status ===
-      await CallSchedule.updateOne(
-        { "slots._id": slotId },
-        { $set: { "slots.$.status": "accepted" } }
-      );
-
-      return Ok(res, `Slot confirmed and chat created successfully`);
-    } catch (err) {
-      console.error("ConfirmSlotByMentor Error:", err);
-      return UnAuthorized(
-        res,
-        err instanceof Error ? err.message : "Unknown error occurred."
-      );
-    }
-  }
-
-  public async CancelSlotByMentor(req: Request, res: Response) {
-    try {
-      const schedule = await CallSchedule.findOne({
-        "slots._id": req.body,
-      });
-      const slot = await CallSchedule.findOneAndUpdate(
-        {
-          "slots._id": req.body,
-        },
-        {
-          $set: {
-            "slots.$.status": "rejected",
-            "slots.$.booked": false,
-          },
-          $unset: {
-            "slots.$.userId": "", // Unsetting userId properly
-          },
-        },
-        { new: true }
-      );
-      return Ok(res, `Slot rejected`);
-    } catch (err) {
-      return UnAuthorized(res, err);
-    }
-  }
-
-  public async JoinSession(req: Request, res: Response) {
-    try {
-      const { sessionId, userType, userId } = req.body;
-      
-      if (!sessionId || !userType || !userId) {
-        return UnAuthorized(res, "Missing required fields: sessionId, userType, userId");
-      }
-
-      // Find the chat session
-      const session = await Chat.findById(sessionId);
-      if (!session) {
-        return UnAuthorized(res, "Session not found");
-      }
-
-      // Verify user has access to this session
-      const hasAccess = 
-        (userType === 'user' && session.users.user.toString() === userId) ||
-        (userType === 'mentor' && session.users.mentor.toString() === userId);
-      
-      if (!hasAccess) {
-        return UnAuthorized(res, "Access denied to this session");
-      }
-
-      // Update join tracking
-       const updateField = userType === 'user' ? 'sessionDetails.userJoined' : 'sessionDetails.mentorJoined';
-       const joinTimeField = userType === 'user' ? 'sessionDetails.userJoinedAt' : 'sessionDetails.mentorJoinedAt';
-       const joinTime = new Date();
-       
-       await Chat.updateOne(
-         { _id: sessionId },
-         { 
-           $set: { 
-             [updateField]: true,
-             [joinTimeField]: joinTime,
-             status: 'ACTIVE'
-           } 
-         }
-       );
-
-       // Get updated session to check if both parties have joined
-       const updatedSession = await Chat.findById(sessionId);
-       
-       // Start timer logic based on session type
-       if (updatedSession) {
-         await this.checkAndStartSessionTimer(updatedSession);
-       }
-
-      // If this is the first person to join, start recording for video/audio calls
-      if (session.sessionDetails?.callType !== 'chat' && !session.sessionDetails?.recordingId) {
-        try {
-          const recordingResponse = await axios.post(
-            `https://api.100ms.live/v2/recordings/room/${session.sessionDetails.roomId}/start`,
-            {
-              meeting_url: `https://api.100ms.live/v2/rooms/${session.sessionDetails.roomId}`,
-              resolution: {
-                width: 1280,
-                height: 720
+                    </div>
+                    </body>
+                    </html>`,
+              };
+              try {
+                await transporter.sendMail(mentorMailOptions);
+              } catch (mailErr) {
+                console.error("MENTOR email send failed:", (mailErr as any)?.message || mailErr);
+                // Do not fail confirmation due to email issues
               }
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
 
-          if (recordingResponse.data?.id) {
-            await Chat.updateOne(
-              { _id: sessionId },
-              {
-                $set: {
-                  'sessionDetails.recordingId': recordingResponse.data.id,
-                  'sessionDetails.recordingStatus': 'processing'
-                }
-              }
+              };
+
+              // Fire and forget email sending
+              sendEmails().catch((err) => console.error("SendEmails failed:", err));
+
+              return Ok(res, {
+                message: "Session booked successfully",
+                sessionId: chat._id,
+                room: {
+                  roomId,
+                  hostJoinURL,
+                  guestJoinURL
+                },
+                payment: {
+                  method: paymentMethod,
+                  amount: totalCost,
+                  transactionId
+                },
+                joinLink: guestJoinURL
+              });
+          }
+          }
+          }
+          catch (err) {
+            console.error("BookSlotByUserId Error:", err);
+            return UnAuthorized(
+              res,
+              err instanceof Error ? err.message : "Unknown error occurred."
             );
           }
-        } catch (recordingError) {
-          console.error('Failed to start recording:', recordingError);
-          // Don't fail the join if recording fails
-        }
-      }
 
-      return Ok(res, {
-         message: `${userType} joined session successfully`,
-         joinTime,
-         sessionStatus: 'ACTIVE'
-       });
-     } catch (err) {
-       console.error('JoinSession error:', err);
-       return UnAuthorized(res, err instanceof Error ? err.message : "Unknown error occurred");
-     }
-   }
+          }
 
-   private async checkAndStartSessionTimer(session: any) {
-     try {
-       // For group sessions, timer should start immediately when session begins
-       if (session.sessionDetails?.callType === 'group') {
-         if (!session.sessionDetails?.timerStarted) {
-           await this.startSessionTimer(session._id);
-         }
-         return;
-       }
+          public async CancelSlotByMentor(req: Request, res: Response) {
+            try {
+              const schedule = await CallSchedule.findOne({
+                "slots._id": req.body,
+              });
+              const slot = await CallSchedule.findOneAndUpdate(
+                {
+                  "slots._id": req.body,
+                },
+                {
+                  $set: {
+                    "slots.$.status": "rejected",
+                    "slots.$.booked": false,
+                  },
+                  $unset: {
+                    "slots.$.userId": "", // Unsetting userId properly
+                  },
+                },
+                { new: true }
+              );
+              return Ok(res, `Slot rejected`);
+            } catch (err) {
+              return UnAuthorized(res, err);
+            }
+          }
 
-       // For 1-on-1 sessions, timer starts only when both mentor and user have joined
-       const mentorJoined = session.sessionDetails?.mentorJoined || false;
-       const userJoined = session.sessionDetails?.userJoined || false;
+          public async JoinSession(req: Request, res: Response) {
+            try {
+              const { sessionId, userType, userId } = req.body;
+              
+              if (!sessionId || !userType || !userId) {
+                return UnAuthorized(res, "Missing required fields: sessionId, userType, userId");
+              }
 
-       if (mentorJoined && userJoined && !session.sessionDetails?.timerStarted) {
-         await this.startSessionTimer(session._id);
-       }
-     } catch (error) {
-       console.error('Error checking session timer:', error);
-     }
-   }
+              // Find the chat session
+              const session = await Chat.findById(sessionId);
+              if (!session) {
+                return UnAuthorized(res, "Session not found");
+              }
 
-   private async startSessionTimer(sessionId: string) {
-     try {
-       const actualStartTime = new Date();
-       
-       await Chat.updateOne(
-         { _id: sessionId },
-         {
-           $set: {
-             'sessionDetails.timerStarted': true,
-             'sessionDetails.actualStartTime': actualStartTime
+              // Verify user has access to this session
+              const hasAccess = 
+                (userType === 'user' && session.users.user.toString() === userId) ||
+                (userType === 'mentor' && session.users.mentor.toString() === userId);
+              
+              if (!hasAccess) {
+                return UnAuthorized(res, "Access denied to this session");
+              }
+
+              // Update join tracking
+               const updateField = userType === 'user' ? 'sessionDetails.userJoined' : 'sessionDetails.mentorJoined';
+               const joinTimeField = userType === 'user' ? 'sessionDetails.userJoinedAt' : 'sessionDetails.mentorJoinedAt';
+               const joinTime = new Date();
+               
+               await Chat.updateOne(
+                 { _id: sessionId },
+                 { 
+                   $set: { 
+                     [updateField]: true,
+                     [joinTimeField]: joinTime,
+                     status: 'ACTIVE'
+                   } 
+                 }
+               );
+
+               // Get updated session to check if both parties have joined
+               const updatedSession = await Chat.findById(sessionId);
+               
+               // Start timer logic based on session type
+               if (updatedSession) {
+                 await this.checkAndStartSessionTimer(updatedSession);
+               }
+
+              // If this is the first person to join, start recording for video/audio calls
+              if (session.sessionDetails?.callType !== 'chat' && !session.sessionDetails?.recordingId) {
+                try {
+                  const recordingResponse = await axios.post(
+                    `https://api.100ms.live/v2/recordings/room/${session.sessionDetails.roomId}/start`,
+                    {
+                      meeting_url: `https://api.100ms.live/v2/rooms/${session.sessionDetails.roomId}`,
+                      resolution: {
+                        width: 1280,
+                        height: 720
+                      }
+                    },
+                    {
+                      headers: {
+                        Authorization: `Bearer ${process.env.REACT_APP_100MD_SDK_TOKEN}`,
+                        'Content-Type': 'application/json'
+                      }
+                    }
+                  );
+
+                  if (recordingResponse.data?.id) {
+                    await Chat.updateOne(
+                      { _id: sessionId },
+                      {
+                        $set: {
+                          'sessionDetails.recordingId': recordingResponse.data.id,
+                          'sessionDetails.recordingStatus': 'processing'
+                        }
+                      }
+                    );
+                  }
+                } catch (recordingError) {
+                  console.error('Failed to start recording:', recordingError);
+                  // Don't fail the join if recording fails
+                }
+              }
+
+              return Ok(res, {
+                 message: `${userType} joined session successfully`,
+                 joinTime,
+                 sessionStatus: 'ACTIVE'
+               });
+             } catch (err) {
+               console.error('JoinSession error:', err);
+               return UnAuthorized(res, err instanceof Error ? err.message : "Unknown error occurred");
+             }
+           }
+
+           private async checkAndStartSessionTimer(session: any) {
+             try {
+               // For group sessions, timer should start immediately when session begins
+               if (session.sessionDetails?.callType === 'group') {
+                 if (!session.sessionDetails?.timerStarted) {
+                   await this.startSessionTimer(session._id);
+                 }
+                 return;
+               }
+
+               // For 1-on-1 sessions, timer starts only when both mentor and user have joined
+               const mentorJoined = session.sessionDetails?.mentorJoined || false;
+               const userJoined = session.sessionDetails?.userJoined || false;
+
+               if (mentorJoined && userJoined && !session.sessionDetails?.timerStarted) {
+                 await this.startSessionTimer(session._id);
+               }
+             } catch (error) {
+               console.error('Error checking session timer:', error);
+             }
+           }
+
+           private async startSessionTimer(sessionId: string) {
+             try {
+               const actualStartTime = new Date();
+               
+               await Chat.updateOne(
+                 { _id: sessionId },
+                 {
+                   $set: {
+                     'sessionDetails.timerStarted': true,
+                     'sessionDetails.actualStartTime': actualStartTime
+                   }
+                 }
+               );
+
+               console.log(`Session timer started for session ${sessionId} at ${actualStartTime}`);
+             } catch (error) {
+               console.error('Error starting session timer:', error);
+             }
+           }
+
+           public async ConfirmSlotByMentor(req: Request, res: Response) {
+             try {
+               const { slotId } = req.body as { slotId?: string };
+               if (!slotId) {
+                 return UnAuthorized(res, "slotId is required");
+               }
+
+               await CallSchedule.updateOne(
+                 { "slots._id": new mongoose.Types.ObjectId(slotId) },
+                 { $set: { "slots.$.status": "accepted", "slots.$.booked": true } }
+               );
+
+               // Create chat session for this slot upon mentor confirmation
+               const schedule = await CallSchedule.findOne({ "slots._id": new mongoose.Types.ObjectId(slotId) });
+               if (schedule) {
+                 const slot = (schedule.slots || []).find((s: any) => String(s._id) === String(slotId));
+                 const mentorIdStr = String(schedule.mentorId);
+                 const userId = slot?.userId;
+                 const callType = slot?.callType || 'chat';
+                 const durationMinutes = Number(slot?.duration || 60);
+
+                 // Generate room and join URLs (fallback to local URLs for reliability)
+                 const roomId = generateRandomRoomId(12);
+                 const frontendUrl = process.env.FRONTEND_URL || "https://alterbuddy.com";
+                 let hostJoinURL = `${frontendUrl}/user/chat/${mentorIdStr}/${roomId}`;
+                 let guestJoinURL = hostJoinURL;
+                 if (callType === 'audio' || callType === 'video') {
+                   const basePath = callType === 'video' ? 'video' : 'audio';
+                   hostJoinURL = `${frontendUrl}/user/${basePath}/${mentorIdStr}/${roomId}`;
+                   guestJoinURL = hostJoinURL;
+                 }
+
+                 const startTime = new Date();
+                 const endTime = new Date(startTime.getTime() + durationMinutes * 60000);
+
+                 const chatData: any = {
+                   users: {
+                     user: userId,
+                     mentor: schedule.mentorId,
+                   },
+                   sessionDetails: {
+                     roomId,
+                     roomCode: {
+                       host: hostJoinURL ? hostJoinURL.split("/").pop() : undefined,
+                       mentor: guestJoinURL ? guestJoinURL.split("/").pop() : undefined,
+                     },
+                     roomName: `Session-${Date.now()}`,
+                     callType,
+                     duration: String(durationMinutes),
+                     startTime: startTime.toISOString(),
+                     endTime: endTime.toISOString(),
+                     recordingId: null,
+                     recordingUrl: null,
+                   },
+                   status: "PENDING",
+                   isAnonymous: false,
+                 };
+                 const chat = await Chat.create(chatData);
+
+                 return Ok(res, {
+                   message: 'Slot confirmed and chat created successfully',
+                   sessionId: chat._id,
+                   room: {
+                     roomId,
+                     hostJoinURL,
+                     guestJoinURL
+                   },
+                   joinLink: guestJoinURL
+                 });
+               }
+
+               return Ok(res, "Slot confirmed");
+             } catch (err) {
+               console.error("ConfirmSlotByMentor error:", err);
+               return UnAuthorized(
+                 res,
+                 err instanceof Error ? err.message : "Unknown error"
+               );
+             }
+           }
+
+           public async UpdateSlot(req: Request, res: Response) {
+             try {
+               const { slotId } = req.params as { slotId?: string };
+               const updates = req.body as Record<string, any>;
+               if (!slotId) {
+                 return UnAuthorized(res, "slotId is required");
+               }
+
+               // Map body keys to nested slot update paths
+               const setPayload: Record<string, any> = {};
+               for (const [key, value] of Object.entries(updates || {})) {
+                 setPayload[`slots.$.${key}`] = value;
+               }
+
+               await CallSchedule.updateOne(
+                 { "slots._id": new mongoose.Types.ObjectId(slotId) },
+                 { $set: setPayload }
+               );
+
+               return Ok(res, "Slot updated");
+             } catch (err) {
+               console.error("UpdateSlot error:", err);
+               return UnAuthorized(
+                 res,
+                 err instanceof Error ? err.message : "Unknown error"
+               );
+             }
            }
          }
-       );
-
-       console.log(`Session timer started for session ${sessionId} at ${actualStartTime}`);
-     } catch (error) {
-       console.error('Error starting session timer:', error);
-     }
-   }
- }

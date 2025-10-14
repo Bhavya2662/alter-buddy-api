@@ -82,6 +82,13 @@ export class WalletController implements IController {
       path: "/buddy-coins/transactions/my",
       middleware: [AuthForUser],
     });
+    // Test-only top-up route to avoid direct DB writes in tests
+    this.routes.push({
+      handler: this.TestTopUp,
+      method: "POST",
+      path: "/buddy-coins/topup-test",
+      middleware: [AuthForUser],
+    });
   }
 
   public GetAllWallets = async (req: Request, res: Response) => {
@@ -325,6 +332,54 @@ export class WalletController implements IController {
         .sort({ createdAt: -1 });
       console.log("TRANSACTIONS are", transaction);
       return Ok(res, transaction);
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  // Test-only top-up handler
+  public async TestTopUp(req: Request, res: Response) {
+    try {
+      if (process.env.NODE_ENV === "production") {
+        return UnAuthorized(res, "Not allowed in production");
+      }
+      const { amount } = req.body as any;
+      const topupAmount = Number(amount);
+      if (!topupAmount || topupAmount <= 0) {
+        return UnAuthorized(res, "Invalid amount");
+      }
+
+      const token = getTokenFromHeader(req);
+      const verified = verifyToken(token);
+      const user = await User.findById(verified.id);
+      if (!user) {
+        return UnAuthorized(res, "User not found");
+      }
+
+      let wallet = await BuddyCoins.findOne({ userId: user._id });
+      if (!wallet) {
+        wallet = await new BuddyCoins({ balance: 0, userId: user._id }).save();
+      }
+
+      const newBalance = (wallet.balance || 0) + topupAmount;
+      const updatedWallet = await BuddyCoins.findByIdAndUpdate(
+        wallet._id,
+        { $set: { balance: newBalance } },
+        { new: true }
+      );
+
+      const transactionId = generateCustomTransactionId("BDDY", 10);
+      await new Transaction({
+        transactionId,
+        transactionType: "topup_test",
+        closingBal: newBalance,
+        creditAmt: topupAmount,
+        walletId: updatedWallet._id,
+        userId: user._id,
+        status: "success",
+      }).save();
+
+      return Ok(res, { message: "Top-up successful", balance: newBalance });
     } catch (err) {
       return UnAuthorized(res, err);
     }

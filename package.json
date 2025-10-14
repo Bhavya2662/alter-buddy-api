@@ -5,7 +5,7 @@
   "main": "build/bin/www.js",
   "scripts": {
     "start": "node build/bin/www.js",
-    "dev": "nodemon src/index.ts",
+    "dev": "nodemon --exec ts-node src/bin/www.ts",
     "build": "npm run clean && tsc",
     "vercel-build": "npm run build",
     "clean": "rm -rf build",

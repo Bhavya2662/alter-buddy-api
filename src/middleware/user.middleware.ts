@@ -71,13 +71,20 @@ export const AuthForUser = async (
     };
     next();
   } catch (err) {
-    return UnAuthorized(res, err);
+    return UnAuthorized(res, err as any);
   }
 };
 
 export const AuthForMentor = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const authHeader = req.headers.authorization;
+    const hasBearer = !!authHeader && authHeader.startsWith('Bearer ');
+    const hasCookieMentor = !!req.cookies?.mentorToken;
     const token = extractToken(req);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[AuthForMentor] path:', req.path, '| hasBearer:', hasBearer, '| hasCookieMentor:', hasCookieMentor);
+    }
     
     if (!token) {
       return res.status(401).json({
@@ -86,9 +93,23 @@ export const AuthForMentor = async (req: Request, res: Response, next: NextFunct
       });
     }
 
-    const decoded = jwt.verify(token, config.get("JWT_SECRET")) as any;
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, config.get("JWT_SECRET")) as any;
+    } catch (e: any) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[AuthForMentor] jwt.verify error:', e?.message || e);
+      }
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token."
+      });
+    }
     
     if (decoded.role !== 'mentor' && decoded.type !== 'mentor') {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[AuthForMentor] role/type mismatch:', { role: decoded.role, type: decoded.type });
+      }
       return res.status(403).json({
         success: false,
         message: "Access denied. Mentor privileges required."
@@ -98,6 +119,9 @@ export const AuthForMentor = async (req: Request, res: Response, next: NextFunct
     (req as any).user = decoded;
     next();
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[AuthForMentor] unexpected error:', (error as any)?.message || error);
+    }
     return res.status(401).json({
       success: false,
       message: "Invalid token."

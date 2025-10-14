@@ -30,22 +30,22 @@ const routesHandler = (express: Express, controller: IController) => {
     console.log(`Registering route: ${route.method} /api/1.0${route.path}`);
     switch (route.method) {
       case "GET":
-        express.get(`/api/1.0${route.path}`, ...middleware, route.handler);
+        express.get(`/api/1.0${route.path}`, ...middleware, route.handler.bind(controller));
         break;
       case "POST":
-        express.post(`/api/1.0${route.path}`, ...middleware, route.handler);
+        express.post(`/api/1.0${route.path}`, ...middleware, route.handler.bind(controller));
         break;
       case "PUT":
         express.put(`/api/1.0${route.path}`, ...middleware, (req: any, res: any, next: any) => {
           console.log(`PUT request received for /api/1.0${route.path}`);
-          route.handler(req, res, next);
+          return route.handler.bind(controller)(req, res, next);
         });
         break;
       case "DELETE":
-        express.delete(`/api/1.0${route.path}`, ...middleware, route.handler);
+        express.delete(`/api/1.0${route.path}`, ...middleware, route.handler.bind(controller));
         break;
       case "PATCH":
-        express.patch(`/api/1.0${route.path}`, ...middleware, route.handler);
+        express.patch(`/api/1.0${route.path}`, ...middleware, route.handler.bind(controller));
         break;
       default:
         break;

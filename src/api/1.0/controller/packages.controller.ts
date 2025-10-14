@@ -20,6 +20,13 @@ export class PackagesController implements IController {
       path: "/packages",
       middleware: [AuthForMentor],
     });
+    // Alias route to match tests expecting /mentor/package
+    this.routes.push({
+      handler: this.CreateNewPackages,
+      method: "POST",
+      path: "/mentor/package",
+      middleware: [AuthForMentor],
+    });
     this.routes.push({
       handler: this.UpdatePackage,
       method: "PUT",
