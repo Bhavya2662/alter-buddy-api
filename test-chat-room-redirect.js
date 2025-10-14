@@ -63,7 +63,7 @@ async function testChatRoomRedirect() {
       
       // Check for chat room URL in response
       console.log('\n4️⃣ Checking chat room URL...');
-      const chatRoomUrl = responseData.link;
+      const chatRoomUrl = (responseData.room && (responseData.room.guestJoinURL || responseData.room.hostJoinURL)) || responseData.link;
       
       if (chatRoomUrl) {
         console.log('   🔗 Chat room URL:', chatRoomUrl);
@@ -104,8 +104,8 @@ async function testChatRoomRedirect() {
         console.log('   ❌ No chat room URL found in response');
       }
       
-      if (responseData.hostJoinURL) {
-        console.log(`   🔗 Host Join URL: ${responseData.hostJoinURL}`);
+      if (responseData.room?.hostJoinURL) {
+        console.log(`   🔗 Host Join URL: ${responseData.room.hostJoinURL}`);
       }
       
       // Check for session ID or booking ID
@@ -122,8 +122,8 @@ async function testChatRoomRedirect() {
     console.log('\n5️⃣ Testing redirection logic...');
     
     // Simulate what the frontend should do after successful booking
-    if (bookingResponse.data.success && bookingResponse.data.data.guestJoinURL) {
-      const redirectUrl = bookingResponse.data.data.guestJoinURL;
+    if (bookingResponse.data.success && bookingResponse.data.data?.room?.guestJoinURL) {
+      const redirectUrl = bookingResponse.data.data.room.guestJoinURL;
       console.log(`   🔄 Frontend should redirect to: ${redirectUrl}`);
       
       // Check if URL contains expected parameters
@@ -154,7 +154,7 @@ async function testChatRoomRedirect() {
     
     if (bookingResponse.data.success) {
       
-      if (bookingResponse.data.data.guestJoinURL && bookingResponse.data.data.guestJoinURL.includes('/user/chat/')) {
+      if (bookingResponse.data.data?.room?.guestJoinURL && bookingResponse.data.data.room.guestJoinURL.includes('/user/chat/')) {
         console.log('✅ Chat room redirection URL is generated');
         console.log('✅ URL format follows expected pattern');
       } else {

@@ -95,12 +95,12 @@ async function getAuthTokens() {
     adminToken = adminResponse.data.data.token;
     console.log('✅ Admin token obtained');
     
-    // Try to get user token (might fail due to email verification)
+    // Try to get user token (use a known verified test user first)
     const userCredentials = [
-      { mobileOrEmail: 'kg224245@gmail.com', password: 'password123' },
-      { mobileOrEmail: '9691145994', password: 'password123' },
-      { mobileOrEmail: 'abc@gmail.com', password: 'password123' },
-      { mobileOrEmail: '1234567890', password: 'password123' }
+      { mobileOrEmail: 'testuser@example.com', password: 'password123' },
+      { mobileOrEmail: 'demouser@example.com', password: 'DemoPassword123!' },
+      { mobileOrEmail: 'mentor@alterbuddy.com', password: 'mentor123' },
+      { mobileOrEmail: '9691145994', password: 'password123' }
     ];
     
     for (const cred of userCredentials) {
@@ -116,35 +116,33 @@ async function getAuthTokens() {
           break;
         }
       } catch (error) {
-        console.log(`⚠️ User login failed for ${cred.mobileOrEmail}:`, error.response?.data?.message);
+        console.log(`⚠️ User login failed for ${cred.mobileOrEmail}:`, error.response?.data?.message || error.message);
       }
     }
     
-    // Try to get mentor token with different credentials
+    // Try to get mentor token with correct email/password
     const mentorCredentials = [
-      { username: 'Sachishah', password: 'sachi123' },
-      { username: 'Sachishah', password: 'password123' },
-      { username: 'Sachishah', password: 'Sachi@123' },
-      { username: 'Kalabanerji', password: 'kala123' },
-      { username: 'Kalabanerji', password: 'password123' },
-      { username: 'Kalabanerji', password: 'Kala@123' },
-      { username: 'Monikagoyal', password: 'monika123' },
-      { username: 'Monikagoyal', password: 'password123' },
-      { username: 'Tapaswinichou', password: 'tapaswini123' },
-      { username: 'Tapaswinichou', password: 'password123' }
+      { email: 'testmentor@example.com', password: 'password123' },
+      { email: 'mentor@alterbuddy.com', password: 'mentor123' },
+      { email: 'mentor@alterbuddy.com', password: 'password123' },
+      { email: 'mentor@alterbuddy.com', password: 'TestMentor123!' }
     ];
     
     for (const cred of mentorCredentials) {
       try {
         const mentorResponse = await axios.put(`${BASE_URL}/api/1.0/mentor/sign-in`, {
-          username: cred.username,
+          email: cred.email,
           password: cred.password
         });
         mentorToken = mentorResponse.data.data.token;
-        console.log(`✅ Mentor token obtained for ${cred.username}`);
+        // Decode mentor token to get mentor ID
+        const mentorPayload = JSON.parse(Buffer.from(mentorToken.split('.')[1], 'base64').toString());
+        global.testMentorId = mentorPayload.id;
+        console.log(`✅ Mentor token obtained for ${cred.email}`);
+        console.log(`Mentor ID from token: ${global.testMentorId}`);
         break;
       } catch (error) {
-        console.log(`⚠️ Mentor login failed for ${cred.username}:`, error.response?.data?.message);
+        console.log(`⚠️ Mentor login failed for ${cred.email}:`, error.response?.data?.message || error.message);
       }
     }
     
@@ -155,22 +153,33 @@ async function getAuthTokens() {
 }
 
 async function testCreateSessionPackage(results) {
-  const token = userToken || adminToken;
+  const token = userToken; // Require user token for user-protected route
   if (!token) {
-    console.log('⚠️ Skipping Create Session Package - No authentication token available');
+    console.log('⚠️ Skipping Create Session Package - No user authentication token available');
     results.tests.push({
       name: 'Create Session Package',
       status: 'skipped',
-      reason: 'No authentication token available'
+      reason: 'No user authentication token available'
     });
     return;
   }
   
   try {
+    // Fetch a valid category ID if available
+    let categoryId;
+    try {
+      const categoriesRes = await axios.get(`${BASE_URL}/api/1.0/category`, { timeout: 10000 });
+      if (Array.isArray(categoriesRes.data.data) && categoriesRes.data.data.length > 0) {
+        categoryId = categoriesRes.data.data[0]._id;
+      }
+    } catch (err) {
+      console.log('⚠️ Could not fetch categories, proceeding without categoryId');
+    }
+    
     const packageData = {
-      userId: '68a2f604e5e716fa5eeb48b0', // Sample user ID
-      mentorId: '68a3849fa4e79f23deb23bf1', // Sample mentor ID
-      categoryId: '6839863e12dc335fec5b873b', // Sample category ID
+      userId: global.testUserId, // Use authenticated user ID
+      mentorId: global.testMentorId, // Use authenticated mentor ID
+      categoryId: categoryId, // Optional
       type: 'video',
       totalSessions: 5,
       price: 2500,
@@ -343,7 +352,7 @@ async function testGetMentorCreatedPackages(results) {
   }
   
   try {
-    const mentorId = global.testMentorId || '68a3849fa4e79f23deb23bf1';
+    const mentorId = global.testMentorId; // Use mentor ID from token
     const response = await axios.get(`${BASE_URL}/api/1.0/mentor/packages/${mentorId}`, {
       headers: { Authorization: `Bearer ${mentorToken}` },
       timeout: 10000

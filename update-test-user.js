@@ -18,6 +18,7 @@ const UserSchema = new mongoose.Schema({
   phoneNumber: String,
   mobile: String,
   isVerified: { type: Boolean, default: false },
+  verified: { type: Boolean, default: false },
   acType: { type: String, default: 'USER' },
   block: { type: Boolean, default: false },
   online: { type: Boolean, default: false },
@@ -31,6 +32,13 @@ const UserSchema = new mongoose.Schema({
     linkedin: String,
     twitter: String,
     instagram: String,
+  },
+  otp: {
+    email: {
+      code: String,
+      expiresAt: Date,
+      verified: { type: Boolean, default: false }
+    }
   },
 }, { timestamps: true });
 
@@ -48,6 +56,8 @@ async function updateTestUser() {
           block: false,
           online: false,
           isVerified: true,
+          verified: true,
+          'otp.email.verified': true,
         }
       },
       { new: true }
@@ -58,6 +68,8 @@ async function updateTestUser() {
       console.log('acType:', result.acType);
       console.log('block:', result.block);
       console.log('mobile:', result.mobile);
+      console.log('verified:', result.verified);
+      console.log('otp.email.verified:', result.otp?.email?.verified);
     } else {
       console.log('User not found');
     }

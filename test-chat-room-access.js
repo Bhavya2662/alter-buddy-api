@@ -33,12 +33,13 @@ async function testChatRoomAccess() {
       headers: { Authorization: `Bearer ${token}` }
     });
     
-    const chatRoomUrl = bookingResponse.data.data.link;
+    const data = bookingResponse.data?.data || {};
+    const chatRoomUrl = data?.room?.guestJoinURL || data?.room?.hostJoinURL || data?.joinLink || data?.chatLink || data?.link;
     console.log('   ✅ Booking successful!');
     console.log('   🔗 Chat room URL:', chatRoomUrl);
     
     // Extract room details
-    const urlParts = chatRoomUrl.split('/');
+    const urlParts = (typeof chatRoomUrl === 'string' ? chatRoomUrl : '').split('/');
     const mentorId = urlParts[urlParts.length - 2];
     const roomId = urlParts[urlParts.length - 1];
     console.log('   👤 Mentor ID:', mentorId);
@@ -138,7 +139,7 @@ async function testChatRoomAccess() {
     console.log('\n6️⃣ Validating chat room URL format...');
     
     const urlPattern = /\/user\/chat\/[a-f0-9]{24}\/[a-zA-Z0-9]+$/;
-    if (urlPattern.test(chatRoomUrl.replace('https://alterbuddy.com', ''))) {
+    if (typeof chatRoomUrl === 'string' && urlPattern.test(chatRoomUrl.replace('https://alterbuddy.com', ''))) {
       console.log('   ✅ Chat room URL format is valid');
     } else {
       console.log('   ❌ Chat room URL format is invalid');

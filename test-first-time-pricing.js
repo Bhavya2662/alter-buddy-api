@@ -29,10 +29,10 @@ async function testFirstTimePricing() {
     console.log('\n1. Creating new user account...');
     try {
       const signUpResponse = await axios.post(`${API_BASE_URL}/sign-up`, {
-        emails: NEW_TEST_USER.emails,
+        email: NEW_TEST_USER.emails[0],
         password: NEW_TEST_USER.password,
         name: NEW_TEST_USER.name,
-        mobiles: NEW_TEST_USER.mobiles
+        mobile: NEW_TEST_USER.mobiles[0]
       });
       
       console.log('✅ New user created successfully');
@@ -124,16 +124,16 @@ async function testFirstTimePricing() {
     if (secondChatBooking.data.success) {
       const totalCost = secondChatBooking.data.data.totalCost;
       const paymentAmount = secondChatBooking.data.data.payment?.amount;
+      const effectiveCost = typeof paymentAmount === 'number' ? paymentAmount : totalCost;
       
       console.log('✅ Second chat booking successful!');
-      console.log(`   💰 Total Cost: ${totalCost}`);
-      console.log(`   💳 Payment Amount: ${paymentAmount}`);
+      console.log(`   💰 Effective Cost: ${effectiveCost}`);
       console.log(`   🎯 Expected: Regular pricing (not 1 rupee)`);
       
-      if (totalCost > 1 && paymentAmount > 1) {
+      if (effectiveCost > 1) {
         console.log('✅ Regular pricing applied for second booking!');
       } else {
-        console.log(`⚠️ Second booking still showing first-time pricing: ${totalCost || paymentAmount}`);
+        console.log(`⚠️ Second booking still showing first-time pricing: ${effectiveCost}`);
       }
     } else {
       console.log('❌ Second chat booking failed:', secondChatBooking.data.message);
@@ -161,15 +161,15 @@ async function testFirstTimePricing() {
         if (sessionBooking.data.success) {
           const totalCost = sessionBooking.data.data.totalCost;
           const paymentAmount = sessionBooking.data.data.payment?.amount;
+          const effectiveCost = typeof paymentAmount === 'number' ? paymentAmount : totalCost;
           
           console.log(`   ✅ ${sessionType} booking successful!`);
-          console.log(`   💰 Total Cost: ${totalCost}`);
-          console.log(`   💳 Payment Amount: ${paymentAmount}`);
+          console.log(`   💰 Effective Cost: ${effectiveCost}`);
           
-          if (totalCost === 1 || paymentAmount === 1) {
+          if (effectiveCost === 1) {
             console.log(`   🎉 First-time pricing applied to ${sessionType}!`);
           } else {
-            console.log(`   ℹ️ Regular pricing for ${sessionType}: ${totalCost || paymentAmount}`);
+            console.log(`   ℹ️ Regular pricing for ${sessionType}: ${effectiveCost}`);
           }
         } else {
           console.log(`   ❌ ${sessionType} booking failed:`, sessionBooking.data.message);
@@ -182,7 +182,7 @@ async function testFirstTimePricing() {
     // Step 7: Check transaction history via API
     console.log('\n7. Checking transaction history via API...');
     try {
-      const transactionResponse = await axios.get(`${API_BASE_URL}/wallet/transactions`, {
+      const transactionResponse = await axios.get(`${API_BASE_URL}/buddy-coins/transactions/my`, {
         headers: {
           'Authorization': `Bearer ${newUserToken}`,
           'Content-Type': 'application/json'

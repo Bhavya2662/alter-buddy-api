@@ -1,6 +1,16 @@
 const axios = require('axios');
+const fs = require('fs');
 
-const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OTNhZjM3NjRiM2FlOWFiNzQ4NWEwZCIsImlhdCI6MTc1NTUxMjcyMSwiZXhwIjoxNzU4MTA0NzIxfQ.w-58WVOcaY4r94sDZh0CHXhWFI0UKvnd24QyPkbSjWk';
+// Load JWT token from environment or token.txt for freshness
+const token = process.env.JWT_TOKEN || (() => {
+  try {
+    return fs.readFileSync('token.txt', 'utf8').trim();
+  } catch (e) {
+    console.warn('No token.txt found. Run get-proper-user-token.js or set JWT_TOKEN env var.');
+    return '';
+  }
+})();
+
 const mentorId = '6843d13ab2ad92ac25692a2d';
 
 async function testBooking(callType, time, type = 'instant') {

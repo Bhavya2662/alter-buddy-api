@@ -2,8 +2,12 @@ const axios = require('axios');
 
 const API_BASE_URL = 'http://localhost:8080/api/1.0';
 const TEST_USER = {
-  mobileOrEmail: 'bhavyasharma2662@gmail.com',
-  password: 'password123'
+  mobileOrEmail: 'demouser@example.com',
+  password: 'DemoPassword123!'
+};
+const TEST_MENTOR = {
+  email: 'mentor@alterbuddy.com',
+  password: 'mentor123'
 };
 
 const TEST_USER_ID = '6893af3764b3ae9ab7485a0d'; // Actual test user ID
@@ -25,12 +29,47 @@ async function testRejoinFunctionality() {
     token = authResponse.data.data.token;
     console.log('   ✅ Authentication successful');
 
+    // Ensure wallet has sufficient balance
+    try {
+      const walletResp = await axios.get(`${API_BASE_URL}/buddy-coins`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const balance = walletResp.data?.data?.balance ?? walletResp.data?.balance ?? 0;
+      console.log('   💰 Current wallet balance:', balance);
+      if (balance < 2000) {
+        const topUpAmt = 2000 - balance + 1000; // buffer
+        const topResp = await axios.put(`${API_BASE_URL}/buddy-coins/top-up`, { amount: topUpAmt }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('   ✅ Wallet topped up, new balance:', topResp.data?.data?.balance ?? 'OK');
+      }
+    } catch (e) {
+      console.log('   ⚠️ Wallet check/top-up skipped:', e.response?.data?.message || e.message);
+    }
+
+    // Fetch user profile to get dynamic userId
+    const profileResp = await axios.get(`${API_BASE_URL}/user/profile`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    userId = profileResp.data?.data?._id || profileResp.data?.user?._id;
+    console.log('   🧑‍💻 User ID:', userId);
+
+    // Mentor login to obtain a valid mentorId
+    console.log('\n1️⃣b Getting mentor authentication and ID...');
+    const mentorSignIn = await axios.put(`${API_BASE_URL}/mentor/sign-in`, TEST_MENTOR);
+    const mentorToken = mentorSignIn.data.data.token;
+    const mentorProfile = await axios.get(`${API_BASE_URL}/mentor/profile`, {
+      headers: { Authorization: `Bearer ${mentorToken}` }
+    });
+    mentorId = mentorProfile.data?.data?._id || mentorProfile.data?.mentor?._id;
+    console.log('   🧑‍🏫 Mentor ID:', mentorId);
+
     // Step 2: Book first chat session
     console.log('\n2️⃣ Booking first chat session...');
     const firstBookingData = {
-      userId: TEST_USER_ID,
+      userId: userId,
       callType: 'chat',
-      mentorId: MENTOR_ID,
+      mentorId: mentorId,
       time: '30',
       type: 'instant'
     };
@@ -40,9 +79,21 @@ async function testRejoinFunctionality() {
     });
 
     console.log('   ✅ First booking successful!');
-    console.log('   🔗 First chat room URL:', firstBookingResponse.data.data.link);
+    const firstData = firstBookingResponse.data?.data || {};
+    const firstLink = firstData?.room?.guestJoinURL || firstData?.room?.hostJoinURL || firstData?.joinLink || firstData?.chatLink || firstData?.link;
+    console.log('   🔗 First chat room URL:', firstLink);
     
-    const firstRoomId = firstBookingResponse.data.data.link.split('/').pop();
+    let firstRoomId = firstData?.roomId;
+    if (!firstRoomId && typeof firstLink === 'string') {
+      try {
+        const parsed = new URL(firstLink, 'http://dummy');
+        const parts = parsed.pathname.split('/').filter(Boolean);
+        firstRoomId = parts[parts.length - 1];
+      } catch (_) {
+        const firstUrlParts = firstLink.split('/');
+        firstRoomId = firstUrlParts[firstUrlParts.length - 1];
+      }
+    }
     console.log('   🏠 First Room ID:', firstRoomId);
 
     // Wait a moment before testing rejoin
@@ -55,7 +106,9 @@ async function testRejoinFunctionality() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      const rejoinRoomId = rejoinSameResponse.data.data.link.split('/').pop();
+      const rejoinData = rejoinSameResponse.data?.data || {};
+      const rejoinLink = rejoinData?.room?.guestJoinURL || rejoinData?.room?.hostJoinURL || rejoinData?.joinLink || rejoinData?.chatLink || rejoinData?.link;
+      const rejoinRoomId = rejoinData?.roomId || (typeof rejoinLink === 'string' ? rejoinLink.split('/').pop() : undefined);
       
       if (rejoinRoomId === firstRoomId) {
         console.log('   ✅ Rejoin successful - same room ID returned');
@@ -71,9 +124,9 @@ async function testRejoinFunctionality() {
     // Step 4: Test different session type (should require new payment)
     console.log('\n4️⃣ Testing different session type (audio call)...');
     const differentSessionData = {
-      userId: TEST_USER_ID,
+      userId: userId,
       callType: 'audio',
-      mentorId: MENTOR_ID,
+      mentorId: mentorId,
       time: '30',
       type: 'instant'
     };
@@ -83,7 +136,9 @@ async function testRejoinFunctionality() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      const secondRoomId = secondBookingResponse.data.data.link.split('/').pop();
+      const secondData = secondBookingResponse.data?.data || {};
+      const secondLink = secondData?.room?.guestJoinURL || secondData?.room?.hostJoinURL || secondData?.joinLink || secondData?.chatLink || secondData?.link;
+      const secondRoomId = secondData?.roomId || (typeof secondLink === 'string' ? secondLink.split('/').pop() : undefined);
       
       if (secondRoomId !== firstRoomId) {
         console.log('   ✅ Different session type created new room:', secondRoomId);

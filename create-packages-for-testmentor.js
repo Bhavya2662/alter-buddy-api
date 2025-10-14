@@ -44,32 +44,33 @@ const MentorSchema = new mongoose.Schema({
 
 const Mentor = mongoose.model('Mentor', MentorSchema);
 
-async function createPackagesForTestMentor() {
+async function createPackagesForMentorEmail() {
   try {
-    console.log('🔍 Finding testmentor...');
+    const mentorEmail = process.env.MENTOR_EMAIL || 'videomentor@example.com';
+    console.log('🔍 Finding mentor by email...', mentorEmail);
     
-    // Find the mentor by username
-    const mentor = await Mentor.findOne({ 'auth.username': 'testmentor' });
+    // Find the mentor by email
+    const mentor = await Mentor.findOne({ 'contact.email': mentorEmail });
     
     if (!mentor) {
-      console.error('❌ testmentor not found in database');
+      console.error('❌ Mentor not found in database for email:', mentorEmail);
       process.exit(1);
     }
     
     const mentorId = mentor._id;
-    console.log('✅ Found testmentor with ID:', mentorId);
+    console.log('✅ Found mentor with ID:', mentorId);
     
     // Check if packages already exist
     const existingPackages = await Packages.find({ mentorId });
     if (existingPackages.length > 0) {
-      console.log('⚠️  Packages already exist for testmentor:');
+      console.log('⚠️  Packages already exist for this mentor:');
       existingPackages.forEach(pkg => {
         console.log(`   ${pkg.packageType}: $${pkg.price}/minute (ID: ${pkg._id})`);
       });
       return;
     }
     
-    console.log('📦 Creating packages for testmentor...');
+    console.log('📦 Creating packages for mentor...');
     
     // Create packages for different call types
     const packages = [
@@ -102,13 +103,13 @@ async function createPackagesForTestMentor() {
     console.log('   Chat (30 min): $' + (2 * 30));
     console.log('   Audio (30 min): $' + (3 * 30));
     console.log('   Video (30 min): $' + (5 * 30));
-    console.log('\n🎉 testmentor packages setup complete!');
+    console.log('\n🎉 Mentor packages setup complete!');
     
   } catch (error) {
-    console.error('❌ Error creating packages for testmentor:', error);
+    console.error('❌ Error creating packages for mentor:', error);
   } finally {
     mongoose.connection.close();
   }
 }
 
-createPackagesForTestMentor();
+createPackagesForMentorEmail();

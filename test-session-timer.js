@@ -4,13 +4,19 @@ const config = require('config');
 // Test configuration
 const BASE_URL = 'http://localhost:8080/api/1.0';
 const TEST_USER = {
-  email: 'bhavyasharma2662@gmail.com',
-  password: 'password123'
+  email: 'demouser@example.com',
+  password: 'DemoPassword123!'
 };
 const TEST_USER_ID = '6893af3764b3ae9ab7485a0d';
 const TEST_MENTOR_ID = '68a37c625e4fb05bdff599d3';
+const TEST_MENTOR = {
+  email: 'mentor@alterbuddy.com',
+  password: 'mentor123'
+};
 
 let authToken = '';
+let userId;
+let mentorId;
 
 async function authenticateUser() {
   try {
@@ -19,10 +25,40 @@ async function authenticateUser() {
        mobileOrEmail: TEST_USER.email,
        password: TEST_USER.password
      });
-    
     if (response.data.success) {
       authToken = response.data.data.token;
       console.log('   ✅ Authentication successful');
+      // Fetch user profile
+      const profileResp = await axios.get(`${BASE_URL}/user/profile`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      userId = profileResp.data?.data?._id || profileResp.data?.user?._id;
+      console.log('   🧑‍💻 User ID:', userId);
+      // Ensure wallet has sufficient balance
+      try {
+        const walletResp = await axios.get(`${BASE_URL}/buddy-coins`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        const balance = walletResp.data?.data?.balance ?? walletResp.data?.balance ?? 0;
+        console.log('   💰 Current wallet balance:', balance);
+        if (balance < 500) {
+          const topUpAmt = 1000;
+          await axios.put(`${BASE_URL}/buddy-coins/top-up`, { amount: topUpAmt }, {
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          console.log('   ✅ Wallet topped up by', topUpAmt);
+        }
+      } catch (e) {
+        console.log('   ⚠️ Wallet check/top-up skipped:', e.response?.data?.message || e.message);
+      }
+      // Mentor login to get mentorId
+      const mentorSignIn = await axios.put(`${BASE_URL}/mentor/sign-in`, TEST_MENTOR);
+      const mentorToken = mentorSignIn.data.data.token;
+      const mentorProfile = await axios.get(`${BASE_URL}/mentor/profile`, {
+        headers: { Authorization: `Bearer ${mentorToken}` }
+      });
+      mentorId = mentorProfile.data?.data?._id || mentorProfile.data?.mentor?._id;
+      console.log('   🧑‍🏫 Mentor ID:', mentorId);
       return true;
     } else {
       console.log('   ❌ Authentication failed:', response.data.message);
@@ -37,15 +73,13 @@ async function authenticateUser() {
 async function bookShortSession() {
   try {
     console.log('\n⏱️ Booking short 2-minute chat session...');
-    
     const bookingData = {
-      userId: TEST_USER_ID,
+      userId: userId,
       callType: 'chat',
-      mentorId: TEST_MENTOR_ID,
-      time: '2', // 2 minutes for quick testing
+      mentorId: mentorId,
+      time: '2',
       type: 'instant'
     };
-    
     const response = await axios.put(`${BASE_URL}/slot/book`, bookingData, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -55,17 +89,30 @@ async function bookShortSession() {
     
     if (response.data.success !== false) {
       console.log('   ✅ Short session booked successfully!');
-      console.log('   🔗 Chat room URL:', response.data.data.link);
+      const data = response.data?.data || {};
+      const chatUrl = data?.room?.guestJoinURL || data?.room?.hostJoinURL || data?.joinLink || data?.chatLink || data?.link;
+      if (chatUrl) {
+        console.log('   🔗 Chat room URL:', chatUrl);
+      }
       
-      // Extract room ID from URL
-      const urlParts = response.data.data.link.split('/');
-      const roomId = urlParts[urlParts.length - 1];
+      // Prefer explicit roomId from API; fallback to parsing from URL if available
+      let roomId = data?.roomId;
+      if (!roomId && typeof chatUrl === 'string') {
+        try {
+          const parsed = new URL(chatUrl, 'http://dummy');
+          const parts = parsed.pathname.split('/').filter(Boolean);
+          roomId = parts[parts.length - 1];
+        } catch (_) {
+          const urlParts = chatUrl.split('/');
+          roomId = urlParts[urlParts.length - 1];
+        }
+      }
       console.log('   🏠 Room ID:', roomId);
       
       return {
         roomId,
-        chatUrl: response.data.data.link,
-        payment: response.data.data.payment
+        chatUrl,
+        payment: data.payment
       };
     } else {
       console.log('   ❌ Booking failed:', response.data.message);

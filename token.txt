@@ -1,1 +1,13 @@
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmZmEyZTUwZmIyNDRiYTQ5MDVkZCIsImlhdCI6MTc1OTM5MDUxNywiZXhwIjoxNzYxOTgyNTE3fQ.lk5_fA1gBHTpth10urr76ePy-Or2aqx216oqhaTPaHw
+🔑 Getting User JWT Token
+========================================
+🔐 Attempting user login...
+✅ Login successful!
+🎫 User JWT Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmZmEyZTUwZmIyNDRiYTQ5MDVkZCIsImlhdCI6MTc2MDMzOTM5MCwiZXhwIjoxNzYyOTMxMzkwfQ.bIRPvb5unnwI0SzOpsc9WMaTGiT0KHRxrKl0yUYWa7k
+📋 Token payload: {
+  "id": "68a2ffa2e50fb244ba4905dd",
+  "iat": 1760339390,
+  "exp": 1762931390
+}
+
+🎯 Copy this token for testing:
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YTJmZmEyZTUwZmIyNDRiYTQ5MDVkZCIsImlhdCI6MTc2MDMzOTM5MCwiZXhwIjoxNzYyOTMxMzkwfQ.bIRPvb5unnwI0SzOpsc9WMaTGiT0KHRxrKl0yUYWa7k

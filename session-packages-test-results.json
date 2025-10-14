@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-06T07:20:20.491Z",
+  "timestamp": "2025-10-14T05:28:37.075Z",
   "baseUrl": "http://localhost:8080",
   "tests": [
     {
@@ -7,7 +7,7 @@
       "status": "success",
       "statusCode": 200,
       "data": {
-        "packageId": "68e36db5d74b775043d3d676",
+        "packageId": "68eddf8517120baad5bc641b",
         "type": "video",
         "totalSessions": 5,
         "price": 2500,
@@ -19,18 +19,57 @@
       "status": "success",
       "statusCode": 200,
       "data": {
-        "userId": "68a2f604e5e716fa5eeb48b0",
-        "packagesCount": 1,
+        "userId": "68a2ffa2e50fb244ba4905dd",
+        "packagesCount": 54,
         "samplePackage": {
-          "_id": "68e36db5d74b775043d3d676",
-          "userId": "68a2f604e5e716fa5eeb48b0",
-          "mentorId": null,
-          "categoryId": {
-            "_id": "6839863e12dc335fec5b873b",
-            "title": "Past Life Regression",
+          "_id": "68eddf8517120baad5bc641b",
+          "userId": "68a2ffa2e50fb244ba4905dd",
+          "mentorId": {
+            "auth": {
+              "username": "testmentor",
+              "password": "$2b$10$ayzgvGUfEBTu.uSVzlTiTOsz.K6L9oHpCHgxWJnKbcQ0wDcbln5Kq"
+            },
+            "contact": {
+              "email": "mentor@alterbuddy.com",
+              "mobile": "9876543210",
+              "address": "Test Address"
+            },
+            "name": {
+              "firstName": "Test",
+              "lastName": "Mentor"
+            },
+            "accountStatus": {
+              "block": false,
+              "online": false,
+              "verification": true
+            },
+            "_id": "68df60914dafe1d19a957a57",
+            "category": [],
+            "specialists": [
+              "General Counseling"
+            ],
+            "acType": "MENTOR",
+            "inCall": false,
+            "isUnavailable": false,
+            "videoLink": "https://youtu.be/samaSr6cmLU?si=j0c7p5n6E8HCushK",
+            "description": "Test mentor for recording access verification",
+            "image": "test-image.jpg",
+            "languages": [
+              "English"
+            ],
             "status": true,
-            "createdAt": "2025-05-30T10:19:42.594Z",
-            "updatedAt": "2025-08-13T14:06:11.888Z",
+            "qualification": "Test Qualification",
+            "whatCanAsk": [],
+            "createdAt": "2025-10-03T05:35:13.730Z",
+            "updatedAt": "2025-10-13T07:41:57.751Z",
+            "__v": 0
+          },
+          "categoryId": {
+            "_id": "68e791d9e8da93038ac4f8c1",
+            "title": "hjhjh",
+            "status": true,
+            "createdAt": "2025-10-09T10:43:37.247Z",
+            "updatedAt": "2025-10-09T10:43:37.247Z",
             "__v": 0
           },
           "type": "video",
@@ -38,9 +77,9 @@
           "remainingSessions": 5,
           "price": 2500,
           "status": "active",
-          "expiryDate": "2025-11-05T07:20:21.110Z",
-          "createdAt": "2025-10-06T07:20:21.325Z",
-          "updatedAt": "2025-10-06T07:20:21.325Z",
+          "expiryDate": "2025-11-13T05:28:37.698Z",
+          "createdAt": "2025-10-14T05:28:37.727Z",
+          "updatedAt": "2025-10-14T05:28:37.727Z",
           "__v": 0
         }
       }
@@ -50,38 +89,47 @@
       "status": "success",
       "statusCode": 200,
       "data": {
-        "packageId": "68e36db5d74b775043d3d676",
+        "packageId": "68eddf8517120baad5bc641b",
         "remainingSessions": 4,
         "status": "active"
       }
     },
     {
       "name": "Get Mentor Created Packages",
-      "status": "skipped",
-      "reason": "No mentor authentication token available"
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "mentorId": "68df60914dafe1d19a957a57",
+        "packagesCount": 1
+      }
     },
     {
       "name": "Update Package",
-      "status": "skipped",
-      "reason": "No mentor authentication token available"
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "packageId": "68eddf8517120baad5bc641b",
+        "updatedPrice": 3000,
+        "updatedTotalSessions": 8
+      }
     },
     {
       "name": "Package Filtering by Type",
       "status": "success",
       "data": {
-        "userId": "68a2f604e5e716fa5eeb48b0",
+        "userId": "68a2ffa2e50fb244ba4905dd",
         "testedTypes": [
           "chat",
           "audio",
           "video"
         ],
-        "totalFilteredPackages": 1
+        "totalFilteredPackages": 54
       }
     }
   ],
   "summary": {
     "total": 6,
-    "passed": 4,
+    "passed": 6,
     "failed": 0
   }
 }
