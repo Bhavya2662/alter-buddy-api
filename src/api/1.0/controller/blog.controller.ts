@@ -3,6 +3,7 @@ import { IControllerRoutes, IController, IBlogProps } from "../../../interface";
 import { AuthForMentor, AuthForUser, AuthForAdmin } from "../../../middleware";
 import { Blog, User } from "../../../model";
 import { Ok, UnAuthorized, getTokenFromHeader, verifyToken } from "../../../utils";
+import { Types } from "mongoose";
 
 export class BlogController implements IController {
   public routes: IControllerRoutes[] = [];
@@ -66,6 +67,14 @@ export class BlogController implements IController {
       path: "/blog/admin/:id",
       middleware: [AuthForAdmin],
     });
+
+    // Admin route - create blog on behalf of a user
+    this.routes.push({
+      handler: this.AdminCreateBlog,
+      method: "POST",
+      path: "/blog/admin",
+      middleware: [AuthForAdmin],
+    });
   }
   public async GetAllBlog(req: Request, res: Response) {
     try {
@@ -86,8 +95,8 @@ export class BlogController implements IController {
   }
   public async UploadBlog(req: Request, res: Response) {
     try {
-      const { body, label, subLabel, blogLink, htmlContent, featuredImage, images, author, tags, isPublished, readTime } = req.body;
-      if (!body || !label || !subLabel || !blogLink) {
+      const { body, label, subLabel, htmlContent, featuredImage, images, author, tags, isPublished, readTime } = req.body;
+      if (!body || !label || !subLabel) {
         return UnAuthorized(res, "missing fields");
       }
       
@@ -113,7 +122,6 @@ export class BlogController implements IController {
         body,
         label,
         subLabel,
-        blogLink,
         htmlContent,
         featuredImage,
         images,
@@ -231,6 +239,45 @@ export class BlogController implements IController {
       }
       
       return Ok(res, `Blog "${blog.label}" has been updated by admin`);
+    } catch (err) {
+      return UnAuthorized(res, err);
+    }
+  }
+
+  // Admin create blog handler
+  public async AdminCreateBlog(req: Request, res: Response) {
+    try {
+      const { body, label, subLabel, htmlContent, featuredImage, images, author, tags, isPublished, readTime, authorId } = req.body as IBlogProps & { authorId: string };
+
+      if (!body || !label || !subLabel) {
+        return UnAuthorized(res, "missing fields");
+      }
+
+      if (!authorId) {
+        return UnAuthorized(res, "authorId is required to create blog on behalf of a user");
+      }
+
+      const user = await User.findById(authorId);
+      if (!user) {
+        return UnAuthorized(res, "Author user not found");
+      }
+
+      const blogData: Partial<IBlogProps> = {
+        body,
+        label,
+        subLabel,
+        htmlContent,
+        featuredImage,
+        images,
+        author: author || `${(user.name as any)?.firstName || ''} ${(user.name as any)?.lastName || ''}`.trim() || 'Unknown',
+        authorId: new Types.ObjectId(user._id),
+        tags,
+        isPublished: isPublished !== undefined ? isPublished : true,
+        readTime: readTime || 5,
+      };
+
+      const blog = await new Blog(blogData as IBlogProps).save();
+      return Ok(res, `${blog.label} is uploaded by admin`);
     } catch (err) {
       return UnAuthorized(res, err);
     }

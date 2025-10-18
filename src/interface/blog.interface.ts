@@ -4,7 +4,6 @@ export interface IBlogProps {
   label: string;
   subLabel: string;
   body: string;
-  blogLink: string;
   htmlContent?: string;
   featuredImage?: string;
   images?: string[];
