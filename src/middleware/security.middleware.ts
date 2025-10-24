@@ -110,7 +110,9 @@ export const corsOptions = {
     'Origin',
     'Access-Control-Request-Method',
     'Access-Control-Request-Headers',
-    'rtk-query'
+    // Include both lowercase and capitalized variants to satisfy preflight for RTK Query header
+    'rtk-query',
+    'RTK-Query'
   ]
 };
 

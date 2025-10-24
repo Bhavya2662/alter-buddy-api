@@ -479,7 +479,7 @@ export class MentorCallSchedule implements IController {
             await sessionPackage.save();
             console.log('DEBUG: Last session package saved successfully');
           } catch (saveError) {
-            console.log('DEBUG: Error saving session package on last session:', saveError);
+            console.log('DEBUG: Error saving session package');
             return UnAuthorized(res, 'Failed to update session package');
           }
           
@@ -1280,12 +1280,24 @@ export class MentorCallSchedule implements IController {
 
           public async CancelSlotByMentor(req: Request, res: Response) {
             try {
+              // Accept either raw JSON string body ("<slotId>") or object with { slotId }
+              const slotId = typeof req.body === 'string' ? req.body : (req.body?.slotId as string | undefined);
+              if (!slotId) {
+                return UnAuthorized(res, "slotId is required");
+              }
+
+              const slotObjectId = new mongoose.Types.ObjectId(slotId);
+
               const schedule = await CallSchedule.findOne({
-                "slots._id": req.body,
+                "slots._id": slotObjectId,
               });
-              const slot = await CallSchedule.findOneAndUpdate(
+              if (!schedule) {
+                return UnAuthorized(res, "Slot not found");
+              }
+
+              await CallSchedule.findOneAndUpdate(
                 {
-                  "slots._id": req.body,
+                  "slots._id": slotObjectId,
                 },
                 {
                   $set: {
@@ -1300,7 +1312,7 @@ export class MentorCallSchedule implements IController {
               );
               return Ok(res, `Slot rejected`);
             } catch (err) {
-              return UnAuthorized(res, err);
+              return UnAuthorized(res, err instanceof Error ? err.message : err);
             }
           }
 
