@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-06T06:59:52.881Z",
+  "timestamp": "2025-10-24T20:04:57.318Z",
   "baseUrl": "http://localhost:8080",
   "tests": [
     {
@@ -7,7 +7,7 @@
       "status": "success",
       "statusCode": 200,
       "data": {
-        "sessionsCount": 13,
+        "sessionsCount": 19,
         "sampleSession": {
           "_id": "686f93490ad64a94f5156280",
           "mentorId": null,
@@ -39,34 +39,69 @@
                   "verified": false
                 },
                 "email": {
-                  "verified": false
+                  "verified": true
                 }
               },
+              "canWriteBlog": false,
               "_id": "68a2ffa2e50fb244ba4905dd",
               "acType": "USER",
               "email": "testuser@example.com",
               "mobile": "1234567890",
               "password": "$2b$10$EmgJuFtyI/a.AaxzmR3NzOX7g710Md7co/sJ3OfGxNw2IJzoY0Jry",
               "block": false,
-              "verified": false,
-              "online": false,
+              "verified": true,
+              "online": true,
               "myInitialCategories": [],
               "createdAt": "2025-08-18T10:25:38.045Z",
-              "updatedAt": "2025-10-03T14:24:52.064Z",
+              "updatedAt": "2025-10-24T19:35:12.480Z",
               "__v": 1,
               "isVerified": true,
               "interests": [],
               "wallet": 1000,
               "isDeactivated": false,
               "markedForDeletion": false
+            },
+            {
+              "name": {
+                "firstName": "veer",
+                "lastName": "gurjar"
+              },
+              "deactivation": {
+                "isDeactivated": false,
+                "markedForDeletion": false
+              },
+              "otp": {
+                "mobile": {
+                  "verified": false
+                },
+                "email": {
+                  "verified": false
+                }
+              },
+              "canWriteBlog": false,
+              "_id": "681da10fc4222eb69ca55420",
+              "acType": "USER",
+              "email": "kg224245@gmail.com",
+              "mobile": "9691145994",
+              "password": "$2b$10$BDOkF6.y9rZnxhkAwypeE.ZZOW4iUN4paPV/yy2mYMHDgnNhFSDCe",
+              "block": false,
+              "verified": true,
+              "online": true,
+              "myInitialCategories": [],
+              "createdAt": "2025-05-09T06:30:39.796Z",
+              "updatedAt": "2025-10-24T20:04:58.000Z",
+              "__v": 0,
+              "isEmailVerified": true,
+              "isMobileVerified": true,
+              "isVerified": true
             }
           ],
           "scheduledAt": "2025-07-10T13:17:00.000Z",
           "joinLink": "",
           "status": "scheduled",
           "createdAt": "2025-07-10T10:17:45.270Z",
-          "updatedAt": "2025-08-31T10:50:10.315Z",
-          "__v": 1
+          "updatedAt": "2025-10-24T19:56:04.588Z",
+          "__v": 2
         }
       }
     },
@@ -75,8 +110,8 @@
       "status": "success",
       "statusCode": 200,
       "data": {
-        "mentorId": "68a3849fa4e79f23deb23bf1",
-        "sessionsCount": 1
+        "mentorId": "68ecb5c65fc77f87500df407",
+        "sessionsCount": 0
       }
     },
     {
@@ -90,18 +125,32 @@
     },
     {
       "name": "Create Group Session",
-      "status": "skipped",
-      "reason": "No mentor authentication token available"
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "sessionId": "68fbdbea7baf7fd7aacf00e9",
+        "title": "Test Group Session - 1761336298912",
+        "roomId": "room_1761336298914_x00jgwl1v",
+        "shareableLink": "http://localhost:3000/group-session/join/room_1761336298914_x00jgwl1v"
+      }
     },
     {
       "name": "Book Group Session",
-      "status": "skipped",
-      "reason": "No user authentication token available"
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "sessionId": "68fbdbea7baf7fd7aacf00e9",
+        "userId": "681da10fc4222eb69ca55420"
+      }
     },
     {
       "name": "Join Group Session by Room ID",
-      "status": "skipped",
-      "reason": "No test room ID available from creation step"
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "roomId": "room_1761336298914_x00jgwl1v",
+        "sessionTitle": "Test Group Session - 1761336298912"
+      }
     },
     {
       "name": "Join Session by Room ID (Alternative)",
@@ -114,13 +163,18 @@
     },
     {
       "name": "Update Group Session",
-      "status": "skipped",
-      "reason": "No mentor authentication token available"
+      "status": "success",
+      "statusCode": 200,
+      "data": {
+        "sessionId": "68fbdbea7baf7fd7aacf00e9",
+        "updatedTitle": "Updated Test Group Session - 1761336299760",
+        "newCapacity": 8
+      }
     }
   ],
   "summary": {
     "total": 8,
-    "passed": 4,
+    "passed": 8,
     "failed": 0
   }
 }

@@ -111,29 +111,127 @@ async function getAuthTokens() {
       });
       userToken = userResponse.data.data.token;
       console.log('✅ User token obtained');
+      // Fetch user profile to get userId for bookings
+      const profileResp = await axios.get(`${BASE_URL}/api/1.0/user/profile`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      global.testUserId = profileResp.data.data._id || profileResp.data.data.id;
+      console.log('✅ User profile obtained, ID:', global.testUserId);
+      // Ensure wallet exists and has sufficient balance for bookings
+      try {
+        const topupResp = await axios.post(`${BASE_URL}/api/1.0/buddy-coins/topup-test`, { amount: 2000 }, {
+          headers: { Authorization: `Bearer ${userToken}` },
+        });
+        const newBal = topupResp.data?.data?.balance ?? topupResp.data?.balance;
+        console.log('✅ Wallet topped up for test user, new balance:', newBal);
+      } catch (e) {
+        console.log('⚠️ Wallet top-up failed:', e.response?.data?.message || e.message);
+      }
     } catch (error) {
       console.log('⚠️ User token failed (email verification required):', error.response?.data?.message);
     }
+
+    // Fetch categories for group session creation
+    try {
+      const catResp = await axios.get(`${BASE_URL}/api/1.0/category`);
+      const categories = catResp.data?.data || catResp.data;
+      if (Array.isArray(categories) && categories.length > 0) {
+        global.testCategoryId = categories[0]._id || categories[0].id;
+        console.log('✅ Category selected for testing:', global.testCategoryId);
+      } else {
+        console.log('⚠️ No categories found');
+      }
+    } catch (e) {
+      console.log('⚠️ Failed to fetch categories:', e.response?.data?.message || e.message);
+    }
     
-    // Try to get mentor token with different credentials
-    const mentorCredentials = [
-      { username: 'Sachishah', password: 'password123' },
-      { username: 'Sachishah', password: 'sachi123' },
-      { username: 'Kalabanerji', password: 'password123' },
-      { username: 'Kalabanerji', password: 'kala123' }
-    ];
-    
-    for (const cred of mentorCredentials) {
+    // Try to get mentor token using email/password
+    try {
+      const mentorResponse = await axios.put(`${BASE_URL}/api/1.0/mentor/sign-in`, {
+        email: 'videomentor@example.com',
+        password: 'password123'
+      });
+      mentorToken = mentorResponse.data.data.token;
+      console.log('✅ Mentor token obtained for videomentor@example.com');
+    } catch (error) {
+      console.log('⚠️ Mentor email login failed:', error.response?.data?.message || error.message);
+      // Attempt to seed and verify mentor via admin
       try {
-        const mentorResponse = await axios.put(`${BASE_URL}/api/1.0/mentor/sign-in`, {
-          username: cred.username,
-          password: cred.password
+        const mentorData = {
+          auth: {
+            username: 'videomentor',
+            password: 'password123'
+          },
+          name: {
+            firstName: 'Video',
+            lastName: 'Mentor'
+          },
+          contact: {
+            email: 'videomentor@example.com',
+            mobile: '9876500001',
+            address: 'Seeded Address'
+          },
+          category: [],
+          specialists: ['General Counseling'],
+          languages: ['English'],
+          description: 'Seeded mentor for multi-mentor booking scenario',
+          qualification: 'Licensed Therapist',
+          image: 'seed-image.jpg'
+        };
+        await axios.post(`${BASE_URL}/api/1.0/mentor/sign-up`, mentorData, {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+            'Content-Type': 'application/json'
+          }
+        }).catch((createErr) => {
+          const msg = createErr.response?.data || createErr.message;
+          if (typeof msg === 'string' && msg.toLowerCase().includes('already registered')) {
+            console.log('ℹ️ Mentor already exists, proceeding to verification and sign-in.');
+          } else {
+            console.log('⚠️ Mentor creation error (continuing):', createErr.response?.data?.message || createErr.message);
+          }
         });
-        mentorToken = mentorResponse.data.data.token;
-        console.log(`✅ Mentor token obtained for ${cred.username}`);
-        break;
-      } catch (error) {
-        console.log(`⚠️ Mentor login failed for ${cred.username}:`, error.response?.data?.message);
+
+        // Find mentor ID and verify account via admin
+        const mentorsList = await axios.get(`${BASE_URL}/api/1.0/mentor/all`, {
+          headers: { Authorization: `Bearer ${adminToken}` }
+        });
+        const mentors = mentorsList.data?.data || mentorsList.data;
+        const seededMentor = Array.isArray(mentors) ? mentors.find(m => (m.contact?.email || '').toLowerCase() === 'videomentor@example.com') : null;
+        if (seededMentor?._id) {
+          global.testMentorId = seededMentor._id;
+          console.log('✅ Found mentor ID:', global.testMentorId);
+          await axios.put(`${BASE_URL}/api/1.0/mentor/update/${global.testMentorId}`, {
+            'accountStatus.verification': true,
+            'accountStatus.block': false
+          }, {
+            headers: { Authorization: `Bearer ${adminToken}` }
+          });
+
+          const mentorLoginResponse = await axios.put(`${BASE_URL}/api/1.0/mentor/sign-in`, {
+            email: 'videomentor@example.com',
+            password: 'password123'
+          });
+          mentorToken = mentorLoginResponse.data?.data?.token || mentorLoginResponse.data?.token;
+          console.log('✅ Mentor token obtained after seeding/verification');
+        } else {
+          console.log('❌ Seeded mentor not found in /mentor/all list');
+        }
+      } catch (seedErr) {
+        console.log('❌ Failed to seed/verify mentor:', seedErr.response?.data?.message || seedErr.message);
+      }
+    }
+
+    // Get mentor profile to set mentorId
+    if (mentorToken) {
+      try {
+        const mentorProfile = await axios.get(`${BASE_URL}/api/1.0/mentor/profile`, {
+          headers: { Authorization: `Bearer ${mentorToken}` }
+        });
+        global.testMentorId = global.testMentorId || mentorProfile.data?.data?._id || mentorProfile.data?.data?.id;
+        console.log('✅ Mentor profile obtained, ID:', global.testMentorId);
+      } catch (e) {
+        console.log('⚠️ Failed to fetch mentor profile:', e.response?.data?.message || e.message);
       }
     }
     
@@ -179,8 +277,34 @@ async function testGetAllGroupSessions(results) {
 
 async function testGetMentorGroupSessions(results) {
   try {
-    // Use a sample mentor ID
-    const mentorId = '68a3849fa4e79f23deb23bf1';
+    if (!global.testMentorId) {
+      console.log('⚠️ No mentorId available; attempting to infer from mentors list...');
+      if (adminToken) {
+        try {
+          const mentorsList = await axios.get(`${BASE_URL}/api/1.0/mentor/all`, {
+            headers: { Authorization: `Bearer ${adminToken}` },
+            timeout: 10000
+          });
+          const mentors = mentorsList.data?.data || mentorsList.data;
+          const seededMentor = Array.isArray(mentors) ? mentors.find(m => (m.contact?.email || '').toLowerCase() === 'videomentor@example.com') : null;
+          global.testMentorId = seededMentor?._id;
+        } catch (e) {
+          console.log('⚠️ Failed to fetch mentors list:', e.response?.data?.message || e.message);
+        }
+      }
+    }
+
+    if (!global.testMentorId) {
+      console.log('⚠️ Skipping Get Mentor Group Sessions - No mentorId available');
+      results.tests.push({
+        name: 'Get Mentor Group Sessions',
+        status: 'skipped',
+        reason: 'No mentorId available'
+      });
+      return;
+    }
+
+    const mentorId = global.testMentorId;
     const response = await axios.get(`${BASE_URL}/api/1.0/group-session/mentor/${mentorId}`, { timeout: 10000 });
     console.log('✅ Get Mentor Group Sessions Success:', response.status);
     console.log(`Found ${response.data.data.length} sessions for mentor`);
@@ -262,17 +386,27 @@ async function testCreateGroupSession(results) {
     return;
   }
   
+  if (!global.testMentorId || !global.testCategoryId) {
+    console.log('⚠️ Skipping Create Group Session - Missing mentorId or categoryId');
+    results.tests.push({
+      name: 'Create Group Session',
+      status: 'skipped',
+      reason: 'Missing mentorId or categoryId'
+    });
+    return;
+  }
+  
   try {
     const sessionData = {
-      mentorId: '68a3849fa4e79f23deb23bf1',
-      categoryId: '6839863e12dc335fec5b873b',
+      mentorId: global.testMentorId,
+      categoryId: global.testCategoryId,
       title: `Test Group Session - ${Date.now()}`,
       description: 'Automated test group session for functionality verification',
       sessionType: 'video',
-      price: 500,
+      price: 100,
       capacity: 5,
-      scheduledAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
-      joinLink: 'https://meet.google.com/test-session'
+      scheduledAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
+      joinLink: ''
     };
     
     const response = await axios.post(`${BASE_URL}/api/1.0/group-session`, sessionData, {
@@ -337,7 +471,7 @@ async function testBookGroupSession(results) {
   
   try {
     const bookingData = {
-      userId: '68a2f604e5e716fa5eeb48b0' // Sample user ID
+      userId: global.testUserId // Use signed-in user ID to ensure wallet exists
     };
     
     const response = await axios.put(`${BASE_URL}/api/1.0/group-session/book/${global.testSessionId}`, bookingData, {
