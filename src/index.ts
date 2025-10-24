@@ -53,7 +53,7 @@ class App {
     this.express.options('*', (req: Request, res: Response) => {
       res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
       res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
-      res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,rtk-query');
+      res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,rtk-query,RTK-Query');
       res.header('Access-Control-Allow-Credentials', 'true');
       res.sendStatus(200);
     });
