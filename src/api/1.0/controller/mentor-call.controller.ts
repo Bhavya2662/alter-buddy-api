@@ -8,7 +8,7 @@ import {
 import { AuthForMentor, AuthForUser } from "../../../middleware";
 import { BuddyCoins, CallSchedule, Chat, Mentor, Packages, User, Transaction } from "../../../model";
 import { SessionPackage } from "../../../model/session-package.model";
-import { Ok, UnAuthorized, getTokenFromHeader, verifyToken } from "../../../utils";
+import { Ok, UnAuthorized, getTokenFromHeader, verifyToken, BadRequest } from "../../../utils";
 import moment from "moment-timezone";
 import nodemailer from "nodemailer";
 import mongoose from "mongoose";
@@ -1283,7 +1283,12 @@ export class MentorCallSchedule implements IController {
               // Accept either raw JSON string body ("<slotId>") or object with { slotId }
               const slotId = typeof req.body === 'string' ? req.body : (req.body?.slotId as string | undefined);
               if (!slotId) {
-                return UnAuthorized(res, "slotId is required");
+                return BadRequest(res, "slotId is required");
+              }
+
+              // Validate slotId format before constructing ObjectId to avoid runtime errors
+              if (!mongoose.Types.ObjectId.isValid(slotId)) {
+                return BadRequest(res, "Invalid slotId format");
               }
 
               const slotObjectId = new mongoose.Types.ObjectId(slotId);
@@ -1292,7 +1297,7 @@ export class MentorCallSchedule implements IController {
                 "slots._id": slotObjectId,
               });
               if (!schedule) {
-                return UnAuthorized(res, "Slot not found");
+                return BadRequest(res, "Slot not found");
               }
 
               await CallSchedule.findOneAndUpdate(

@@ -2,19 +2,44 @@ import { Request, NextFunction, Response } from "express";
 
 import { STATUS_CODES } from "../interface";
 
-export const errorHandler = (err: any, _: Request, res: Response, next: NextFunction): Response | void => {
-     if (err.name === "ApiError") {
+export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction): Response | void => {
+     // Ensure CORS headers are present even on error responses
+     const origin = req.headers.origin || "*";
+     res.header("Access-Control-Allow-Origin", origin);
+     res.header("Access-Control-Allow-Credentials", "true");
+     res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS,PATCH");
+     res.header(
+          "Access-Control-Allow-Headers",
+          "Content-Type,Authorization,X-Requested-With,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,rtk-query,RTK-Query"
+     );
+
+     if (err?.name === "ApiError") {
           return res.status(STATUS_CODES.BAD_REQUEST).json({
                success: false,
                status_code: STATUS_CODES.BAD_REQUEST,
                message: err.message,
           });
      }
-     if (err.name === "AuthError") {
+     if (err?.name === "AuthError") {
           return res.status(STATUS_CODES.UNAUTHORIZED).json({
                success: false,
                status_code: STATUS_CODES.UNAUTHORIZED,
                message: err.message,
+          });
+     }
+     // Common Mongoose errors that should be 400s
+     if (err?.name === "ValidationError") {
+          return res.status(STATUS_CODES.BAD_REQUEST).json({
+               success: false,
+               status_code: STATUS_CODES.BAD_REQUEST,
+               message: "Validation error",
+          });
+     }
+     if (err?.name === "CastError") {
+          return res.status(STATUS_CODES.BAD_REQUEST).json({
+               success: false,
+               status_code: STATUS_CODES.BAD_REQUEST,
+               message: "Invalid ID format",
           });
      }
      if (err instanceof Error) {
@@ -34,18 +59,32 @@ export const TryCatch = () => {
                try {
                     return await fn.apply(this, args);
                } catch (err) {
-                    if (err.name === "ApiError") {
+                    if (err?.name === "ApiError") {
                          return args[1].status(STATUS_CODES.BAD_REQUEST).json({
                               success: false,
                               status_code: STATUS_CODES.BAD_REQUEST,
                               message: err.message,
                          });
                     }
-                    if (err.name === "AuthError") {
+                    if (err?.name === "AuthError") {
                          return args[1].status(STATUS_CODES.UNAUTHORIZED).json({
                               success: false,
                               status_code: STATUS_CODES.UNAUTHORIZED,
                               message: err.message,
+                         });
+                    }
+                    if (err?.name === "ValidationError") {
+                         return args[1].status(STATUS_CODES.BAD_REQUEST).json({
+                              success: false,
+                              status_code: STATUS_CODES.BAD_REQUEST,
+                              message: "Validation error",
+                         });
+                    }
+                    if (err?.name === "CastError") {
+                         return args[1].status(STATUS_CODES.BAD_REQUEST).json({
+                              success: false,
+                              status_code: STATUS_CODES.BAD_REQUEST,
+                              message: "Invalid ID format",
                          });
                     }
                     if (err instanceof Error) {
