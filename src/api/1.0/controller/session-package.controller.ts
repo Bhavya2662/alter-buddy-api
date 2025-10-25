@@ -91,6 +91,7 @@ export class SessionPackageController implements IController {
         remainingSessions: totalSessions,
         price,
         status: effectiveUserId ? "active" : "template", // Active for user-owned, template for mentor-created
+        isPublished: false, // default unpublished; mentors can toggle publish
       };
 
       // Only add userId if resolved (for user purchases)
@@ -207,7 +208,8 @@ export class SessionPackageController implements IController {
       const { categoryId, type } = req.query;
       
       const filter: any = {
-        status: "template"
+        status: "template",
+        isPublished: true, // only show published packages to users
       };
       
       // Add optional filters

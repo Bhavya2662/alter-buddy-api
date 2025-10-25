@@ -13,6 +13,7 @@ export interface ISessionPackage extends Document {
   status: "active" | "expired" | "template" | "chat_support_active";
   expiryDate?: Date;
   chatSupportExpiresAt?: Date;
+  isPublished?: boolean; // Publish flag to control visibility on user panel
 }
 
 const SessionPackageSchema: Schema<ISessionPackage> = new Schema(
@@ -28,6 +29,7 @@ const SessionPackageSchema: Schema<ISessionPackage> = new Schema(
     status: { type: String, enum: ["active", "expired", "template", "chat_support_active"], default: "active" },
     expiryDate: { type: Date, required: false }, // Optional expiry date
     chatSupportExpiresAt: { type: Date, required: false }, // Chat support expiry date
+    isPublished: { type: Boolean, default: false }, // Only published templates are visible to users
   },
   { timestamps: true }
 );
