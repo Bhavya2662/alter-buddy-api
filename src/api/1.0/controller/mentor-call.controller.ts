@@ -396,7 +396,8 @@ export class MentorCallSchedule implements IController {
           return UnAuthorized(res, "Session package not found.");
         }
         
-        if (sessionPackage.userId.toString() !== userId) {
+        // Ensure package belongs to the authenticated user
+        if (!sessionPackage.userId || sessionPackage.userId.toString() !== userId) {
           return UnAuthorized(res, "Session package does not belong to user.");
         }
         

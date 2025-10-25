@@ -48,6 +48,12 @@ export class GroupSessionController implements IController {
         middleware: [AuthForUser],
       },
       {
+        path: "/group-session/confirm/:sessionId",
+        method: "POST",
+        handler: this.ConfirmGroupSession,
+        middleware: [AuthForUser],
+      },
+      {
         path: "/group-session/:id",
         method: "PATCH",
         handler: this.UpdateGroupSession,
@@ -344,6 +350,26 @@ export class GroupSessionController implements IController {
       return Ok(res, sessions);
     } catch (err) {
       return UnAuthorized(res, err);
+    }
+  }
+
+  public async ConfirmGroupSession(req: Request, res: Response) {
+    try {
+      const { sessionId } = req.params;
+      const userId = (req as any).user?.id || req.body.userId;
+
+      const session = await GroupSession.findById(sessionId);
+      if (!session) return UnAuthorized(res, "Session not found");
+
+      session.bookedUsers = session.bookedUsers || [];
+      if (!session.bookedUsers.find((u: any) => String(u) === String(userId))) {
+        session.bookedUsers.push(userId as any);
+        await session.save();
+      }
+
+      return Ok(res, { message: "Session confirmed", session });
+    } catch (err) {
+      return UnAuthorized(res, err as any);
     }
   }
 }

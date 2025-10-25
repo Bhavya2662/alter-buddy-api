@@ -31,7 +31,7 @@ export class SessionPackageController implements IController {
         path: "/mentor/packages/:mentorId",
         method: "GET",
         handler: this.GetMentorCreatedPackages,
-        middleware: [AuthForMentor],
+        middleware: [],
       },
       {
         path: "/session/package/:id",
@@ -67,6 +67,20 @@ export class SessionPackageController implements IController {
         duration,
       } = req.body;
 
+      // Derive authenticated user id from middleware (AuthForUser)
+      const authedUserId = (req as any)?.user?.id;
+      let effectiveUserId = userId;
+
+      // If userId is provided but does not match the authenticated user, block the request
+      if (effectiveUserId && authedUserId && effectiveUserId !== authedUserId) {
+        return UnAuthorized(res, "Access denied: cannot create package for another user");
+      }
+
+      // If userId is not provided but user is authenticated, default to the authenticated user
+      if (!effectiveUserId && authedUserId) {
+        effectiveUserId = authedUserId;
+      }
+
       // For mentor-created packages (templates), userId is optional
       // For user-purchased packages, userId is required
       const packageData: any = {
@@ -76,12 +90,12 @@ export class SessionPackageController implements IController {
         totalSessions,
         remainingSessions: totalSessions,
         price,
-        status: userId ? "active" : "template", // Template packages for mentors, active for users
+        status: effectiveUserId ? "active" : "template", // Active for user-owned, template for mentor-created
       };
 
-      // Only add userId if provided (for user purchases)
-      if (userId) {
-        packageData.userId = userId;
+      // Only add userId if resolved (for user purchases)
+      if (effectiveUserId) {
+        packageData.userId = effectiveUserId;
       }
 
       // Add optional fields

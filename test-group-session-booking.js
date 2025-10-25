@@ -2,6 +2,18 @@ const axios = require('axios');
 
 const BASE_URL = 'http://localhost:8080/api/1.0';
 
+// Helper to parse JWT and extract payload
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = Buffer.from(base64, 'base64').toString('utf8');
+    return JSON.parse(jsonPayload);
+  } catch (_) {
+    return null;
+  }
+}
+
 async function testGroupSessionBooking() {
   try {
     console.log('🧪 TESTING GROUP SESSION BOOKING FUNCTIONALITY');
@@ -15,11 +27,13 @@ async function testGroupSessionBooking() {
       console.log(`   ✅ Found ${sessions.length} available group sessions`);
       
       if (sessions.length > 0) {
-        const session = sessions[0];
+        const session = sessions.find(s => s.roomId) || sessions[0];
         console.log(`   📚 Session: ${session.title}`);
         console.log(`   👥 Capacity: ${session.bookedUsers.length}/${session.capacity}`);
         console.log(`   💰 Price: ${session.price} coins`);
         console.log(`   🎥 Type: ${session.sessionType}`);
+        console.log(`   🆔 Session ID: ${session._id}`);
+        console.log(`   🏷️ Room ID: ${session.roomId || 'N/A'}`);
         
         // Test booking this session
         await testBookingExistingSession(session);
@@ -47,8 +61,24 @@ async function testBookingExistingSession(session) {
       password: 'password123'
     });
     
-    const token = signInResponse.data.data.token;
-    const userId = signInResponse.data.data.user._id;
+    const token = signInResponse.data?.data?.token || signInResponse.data?.token;
+    let userId = signInResponse.data?.data?.user?._id || signInResponse.data?.data?.userId || null;
+    if (!userId && token) {
+      const payload = parseJwt(token);
+      userId = payload?.id || payload?._id || payload?.userId || null;
+    }
+    if (!userId && token) {
+      try {
+        const profileRes = await axios.get(`${BASE_URL}/user/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const profile = profileRes.data?.data || profileRes.data;
+        userId = profile?._id || profile?.id || userId;
+      } catch (_) { /* ignore */ }
+    }
+    if (!token || !userId) {
+      throw new Error('User authentication failed or userId not resolved');
+    }
     console.log('   ✅ User authenticated successfully');
     
     const headers = {
@@ -57,26 +87,86 @@ async function testBookingExistingSession(session) {
     };
     
     // Try to book the session
-    const bookingResponse = await axios.put(
-      `${BASE_URL}/group-session/book/${session._id}`,
-      { userId },
-      { headers }
-    );
+    let proceed = true;
+    try {
+      const bookingResponse = await axios.put(
+        `${BASE_URL}/group-session/book/${session._id}`,
+        { userId },
+        { headers }
+      );
+      
+      if (bookingResponse.data.success) {
+        console.log('   ✅ Successfully booked group session!');
+        console.log(`   👥 New capacity: ${bookingResponse.data.data.bookedUsers.length}/${session.capacity}`);
+      } else {
+        console.log('   ❌ Booking failed:', bookingResponse.data.message);
+      }
+    } catch (bookErr) {
+      const msg = bookErr.response?.data?.message || bookErr.message;
+      console.log('   ⚠️ Booking error:', msg);
+      if (/already booked/i.test(msg)) {
+        console.log('   ↪️ User already booked, continuing with join and confirm tests');
+        proceed = true;
+      } else {
+        proceed = false;
+      }
+    }
     
-    if (bookingResponse.data.success) {
-      console.log('   ✅ Successfully booked group session!');
-      console.log(`   👥 New capacity: ${bookingResponse.data.data.bookedUsers.length}/${session.capacity}`);
-    } else {
-      console.log('   ❌ Booking failed:', bookingResponse.data.message);
+    if (!proceed) {
+      return;
     }
     
     // Test joining by room ID
     console.log('\n3. Testing join by room ID...');
-    const joinResponse = await axios.get(`${BASE_URL}/group-session/join/${session.roomId}`);
-    
-    if (joinResponse.data.success) {
-      console.log('   ✅ Successfully accessed session by room ID');
-      console.log(`   🔗 Join link: ${joinResponse.data.data.joinLink}`);
+    if (!session.roomId) {
+      console.log('   ℹ️ No roomId available on selected session, skipping join test');
+    } else {
+      try {
+        // Fetch latest session by id to ensure it exists
+        try {
+          const latestSessionRes = await axios.get(`${BASE_URL}/group-session/${session._id}`);
+          const latest = latestSessionRes.data?.data || latestSessionRes.data;
+          if (!latest) {
+            console.log('   ℹ️ Session lookup by id returned empty');
+          } else {
+            console.log('   🔄 Fetched latest session state before join');
+          }
+        } catch (idErr) {
+          console.log('   ⚠️ Could not fetch session by id:', idErr.response?.data?.message || idErr.message);
+        }
+  
+        const joinResponse = await axios.get(`${BASE_URL}/group-session/join/${session.roomId}`);
+        if (joinResponse.data.success) {
+          console.log('   ✅ Successfully accessed session by room ID');
+          const data = joinResponse.data.data || {};
+          const link = data.joinLink || data.shareableLink || '(no link available)';
+          console.log(`   🔗 Join link: ${link}`);
+        } else {
+          console.log('   ❌ Join failed:', joinResponse.data?.message || 'Unknown error');
+        }
+      } catch (joinErr) {
+        console.log('   ❌ Join error:', joinErr.response?.data?.message || joinErr.message);
+      }
+    }
+
+    // Test confirming the group session (ensures bookedUsers updated via confirm route)
+    console.log('\n4. Testing session confirmation...');
+    try {
+      const confirmResponse = await axios.post(
+        `${BASE_URL}/group-session/confirm/${session._id}`,
+        { userId },
+        { headers }
+      );
+      if (confirmResponse.data && confirmResponse.data.success) {
+        const confirmedSession = confirmResponse.data.data?.session || confirmResponse.data.data;
+        const bookedCount = Array.isArray(confirmedSession?.bookedUsers) ? confirmedSession.bookedUsers.length : (session.bookedUsers?.length || 0);
+        console.log('   ✅ Session confirmation success');
+        console.log(`   👥 Confirmed booked users: ${bookedCount}/${session.capacity}`);
+      } else {
+        console.log('   ❌ Session confirmation failed:', confirmResponse.data?.message || 'Unknown error');
+      }
+    } catch (e) {
+      console.log('   ❌ Confirmation error:', e.response?.data?.message || e.message);
     }
     
   } catch (error) {
