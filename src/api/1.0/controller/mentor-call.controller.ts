@@ -687,9 +687,12 @@ export class MentorCallSchedule implements IController {
         const userWallet = await BuddyCoins.findOne({ userId }).lean();
         console.log('DEBUG: Found wallet:', userWallet ? { balance: userWallet.balance } : null);
         
-        if (!packages || !userWallet) {
-          console.log('DEBUG: Missing package or wallet:', { hasPackage: !!packages, hasWallet: !!userWallet });
-          return UnAuthorized(res, "Package or Wallet not found.");
+        if (!userWallet) {
+          console.log('DEBUG: Missing wallet:', { hasWallet: !!userWallet });
+          return UnAuthorized(res, "Wallet not found.");
+        }
+        if (!packages) {
+          console.log('DEBUG: No package found for mentor/callType. Proceeding with fallback pricing.', { callType });
         }
 
         // Check for first-time pricing (1 rupee for first chat session, regardless of duration)
@@ -710,8 +713,11 @@ export class MentorCallSchedule implements IController {
           totalCost = 1; // 1 rupee for first-time chat users (5 minutes or less)
           console.log('DEBUG: Applied first-time pricing: 1 rupee');
         } else {
-          totalCost = packages.price * parseInt(time);
-          console.log('DEBUG: Applied regular pricing:', totalCost);
+          // Fallback pricing when package is missing
+          const basePrice = callType === 'chat' ? 100 : callType === 'audio' ? 200 : 300;
+          const perMinute = packages?.price ?? basePrice;
+          totalCost = perMinute * parseInt(time);
+          console.log('DEBUG: Applied pricing:', { perMinute, totalCost, source: packages ? 'package' : 'fallback' });
         }
         const slotBalance = userWallet.balance - totalCost;
         if (slotBalance < 0) {
@@ -1259,11 +1265,14 @@ export class MentorCallSchedule implements IController {
                   hostJoinURL,
                   guestJoinURL
                 },
+                // Provide roomId at top-level for frontend compatibility
+                roomId,
                 payment: {
                   method: paymentMethod,
                   amount: totalCost,
                   transactionId
                 },
+                // Provide a valid joinLink for chat
                 joinLink: guestJoinURL
               });
           }
