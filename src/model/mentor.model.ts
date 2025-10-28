@@ -81,6 +81,9 @@ const MentorSchema = new mongoose.Schema<IMentorProps>(
       },
     ],
     maxSlotTime: { type: mongoose.Schema.Types.Number },
+    chatPrice: { type: mongoose.Schema.Types.Number, default: 0 },
+    audioPrice: { type: mongoose.Schema.Types.Number, default: 0 },
+    videoPrice: { type: mongoose.Schema.Types.Number, default: 0 },
   },
   {
     timestamps: true,

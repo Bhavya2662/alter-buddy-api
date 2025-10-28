@@ -714,10 +714,10 @@ export class MentorCallSchedule implements IController {
           console.log('DEBUG: Applied first-time pricing: 1 rupee');
         } else {
           // Fallback pricing when package is missing
-          const basePrice = callType === 'chat' ? 100 : callType === 'audio' ? 200 : 300;
-          const perMinute = packages?.price ?? basePrice;
+          const mentorBasePrice = callType === 'chat' ? (mentor?.chatPrice ?? 100) : callType === 'audio' ? (mentor?.audioPrice ?? 200) : (mentor?.videoPrice ?? 300);
+          const perMinute = packages?.price ?? mentorBasePrice;
           totalCost = perMinute * parseInt(time);
-          console.log('DEBUG: Applied pricing:', { perMinute, totalCost, source: packages ? 'package' : 'fallback' });
+          console.log('DEBUG: Applied pricing:', { perMinute, totalCost, source: packages ? 'package' : 'fallback', mentorBasePrice });
         }
         const slotBalance = userWallet.balance - totalCost;
         if (slotBalance < 0) {

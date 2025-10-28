@@ -40,6 +40,9 @@ export interface IMentorProps {
   qualification: string;
   whatCanAsk?: string[];
   maxSlotTime: number;
+  chatPrice?: number;
+  audioPrice?: number;
+  videoPrice?: number;
 
 }
 
