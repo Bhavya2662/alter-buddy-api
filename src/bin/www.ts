@@ -230,6 +230,40 @@ io.on("connection", (socket) => {
       console.log('❌ Invalid data for updateUserStatus:', { userId, online, typeOfOnline: typeof online });
     }
   });
+
+  // Add: Handle manual mentor status updates
+  socket.on("updateMentorStatus", async (data) => {
+    console.log('🔄 updateMentorStatus event received:', data);
+    const { mentorId, online } = data;
+    if (mentorId && typeof online === 'boolean') {
+      try {
+        const { Mentor } = require("../model");
+        const updatedMentor = await Mentor.findByIdAndUpdate(
+          mentorId,
+          { $set: { "accountStatus.online": online } },
+          { new: true }
+        );
+
+        if (updatedMentor) {
+          console.log(`Mentor ${mentorId} status manually updated to ${online ? 'online' : 'offline'}`);
+          io.emit('mentorStatusUpdated', {
+            mentorId,
+            accountStatus: updatedMentor.accountStatus,
+            inCall: updatedMentor.inCall,
+            isUnavailable: updatedMentor.isUnavailable,
+            status: updatedMentor.status,
+            timestamp: new Date()
+          });
+        } else {
+          console.warn(`Mentor ${mentorId} not found for manual status update`);
+        }
+      } catch (error) {
+        console.error(`Error manually updating mentor ${mentorId} status:`, error);
+      }
+    } else {
+      console.log('❌ Invalid data for updateMentorStatus:', { mentorId, online, typeOfOnline: typeof online });
+    }
+  });
 });
 
 // Function to send notification to specific mentor
