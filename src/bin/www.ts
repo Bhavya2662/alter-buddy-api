@@ -29,6 +29,9 @@ export const io = new Server(server, {
 const mentorSockets = new Map<string, string>(); // mentorId -> socketId
 // Store user socket connections
 const userSockets = new Map<string, string>(); // userId -> socketId
+// Add heartbeat tracking for mentors
+const mentorLastSeen = new Map<string, number>();
+const HEARTBEAT_THRESHOLD_MS = 60000; // 60s inactivity marks offline
 
 // ! ABLY When a client connects
 io.on("connection", (socket) => {
@@ -56,6 +59,8 @@ io.on("connection", (socket) => {
       } catch (error) {
         console.error(`Error updating mentor ${mentorId} online status:`, error);
       }
+      // Track last seen immediately on registration
+      mentorLastSeen.set(data.mentorId, Date.now());
     }
   });
   
@@ -168,52 +173,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // When the client disconnects
-  socket.on("disconnect", async () => {
-    console.log("🔌 Socket disconnect event triggered for socket:", socket.id);
-    
-    // Remove mentor socket if exists
-    for (const [mentorId, socketId] of mentorSockets.entries()) {
-      if (socketId === socket.id) {
-        mentorSockets.delete(mentorId);
-        console.log(`Mentor ${mentorId} disconnected`);
-        
-        // Update mentor offline status in database
-        try {
-          const { Mentor } = require("../model");
-          await Mentor.findByIdAndUpdate(mentorId, { $set: { "accountStatus.online": false } });
-          console.log(`Mentor ${mentorId} status updated to offline`);
-          
-          // Broadcast mentor offline status to all clients
-          io.emit('mentorStatusUpdated', {
-            mentorId,
-            accountStatus: { online: false },
-            timestamp: new Date()
-          });
-        } catch (error) {
-          console.error(`Error updating mentor ${mentorId} offline status:`, error);
-        }
-        break;
-      }
-    }
-    
-    // Remove user socket and update status if exists
-    for (const [userId, socketId] of userSockets.entries()) {
-      if (socketId === socket.id) {
-        userSockets.delete(userId);
-        console.log(`User ${userId} disconnected`);
-        
-        // Update user offline status in database
-        try {
-          await User.findByIdAndUpdate(userId, { $set: { online: false } });
-          console.log(`✅ User ${userId} status updated to offline in database`);
-        } catch (error) {
-          console.error(`❌ Error updating user ${userId} offline status:`, error);
-        }
-        break;
-      }
-    }
-  });
+  // Duplicate disconnect handler removed; see consolidated handler below after heartbeat logic.
 
   // Handle manual user status updates
   socket.on("updateUserStatus", async (data) => {
@@ -264,43 +224,126 @@ io.on("connection", (socket) => {
       console.log('❌ Invalid data for updateMentorStatus:', { mentorId, online, typeOfOnline: typeof online });
     }
   });
+
+  // New: Mentor heartbeat event to keep presence alive
+  socket.on("mentorHeartbeat", (data: { mentorId: string }) => {
+    const { mentorId } = data || {} as any;
+    if (mentorId && mentorSockets.get(mentorId) === socket.id) {
+      mentorLastSeen.set(mentorId, Date.now());
+      // console.log(`❤️‍🔥 Heartbeat from mentor ${mentorId}`);
+    }
+  });
+
+  // When the client disconnects
+  socket.on("disconnect", async () => {
+    console.log("🔌 Socket disconnect event triggered for socket:", socket.id);
+    
+    // Remove mentor socket if exists
+    for (const [mentorId, socketId] of mentorSockets.entries()) {
+      if (socketId === socket.id) {
+        mentorSockets.delete(mentorId);
+        console.log(`Mentor ${mentorId} disconnected`);
+        
+        // Update mentor offline status in database
+        try {
+          const { Mentor } = require("../model");
+          await Mentor.findByIdAndUpdate(mentorId, { $set: { "accountStatus.online": false } });
+          console.log(`Mentor ${mentorId} status updated to offline`);
+          
+          // Broadcast mentor offline status to all clients
+          io.emit('mentorStatusUpdated', {
+            mentorId,
+            accountStatus: { online: false },
+            timestamp: new Date()
+          });
+        } catch (error) {
+          console.error(`Error updating mentor ${mentorId} offline status:`, error);
+        }
+        break;
+      }
+    }
+    
+    // Remove user socket and update status if exists
+    for (const [userId, socketId] of userSockets.entries()) {
+      if (socketId === socket.id) {
+        userSockets.delete(userId);
+        console.log(`User ${userId} disconnected`);
+        
+        // Update user offline status in database
+        try {
+          await User.findByIdAndUpdate(userId, { $set: { online: false } });
+          console.log(`✅ User ${userId} status updated to offline in database`);
+        } catch (error) {
+          console.error(`❌ Error updating user ${userId} offline status:`, error);
+        }
+        break;
+      }
+    }
+  });
+  
+  // Close io.on("connection") block
 });
 
-// Function to send notification to specific mentor
-export const sendAnonymousSessionNotification = (mentorId: string, sessionData: any) => {
-  const mentorSocketId = mentorSockets.get(mentorId);
-  if (mentorSocketId) {
-    io.to(mentorSocketId).emit("anonymousSessionRequest", sessionData);
-    return true;
-  }
-  return false;
-};
+  // Periodic sweep: mark mentors offline if heartbeat stale
+  setInterval(async () => {
+    try {
+      const now = Date.now();
+      for (const [mentorId, socketId] of mentorSockets.entries()) {
+        const lastSeen = mentorLastSeen.get(mentorId) || 0;
+        if (now - lastSeen > HEARTBEAT_THRESHOLD_MS) {
+          const { Mentor } = require("../model");
+          await Mentor.findByIdAndUpdate(mentorId, { $set: { "accountStatus.online": false } });
+          io.emit('mentorStatusUpdated', {
+            mentorId,
+            accountStatus: { online: false },
+            timestamp: new Date()
+          });
+          // Remove stale socket mapping; if socket is truly alive, it will re-register/heartbeat
+          mentorSockets.delete(mentorId);
+          mentorLastSeen.delete(mentorId);
+          console.log(`⌛ Mentor ${mentorId} marked offline due to inactivity`);
+        }
+      }
+    } catch (error) {
+      console.error('Heartbeat sweep error:', error);
+    }
+  }, 30000);
 
-const onError = (error: NodeJS.ErrnoException) => {
-  if (error.syscall !== "listen") {
-    throw error;
-  }
-  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
-  switch (error.code) {
-    case "EACCES":
-      console.error(`${bind} requires elevated privileges`);
-      process.exit(1);
-      break;
-    case "EADDRINUSE":
-      console.error(`${bind} is already in use`);
-      process.exit(1);
-      break;
-    default:
+  // Function to send notification to specific mentor
+  export const sendAnonymousSessionNotification = (mentorId: string, sessionData: any) => {
+    const mentorSocketId = mentorSockets.get(mentorId);
+    if (mentorSocketId) {
+      io.to(mentorSocketId).emit("anonymousSessionRequest", sessionData);
+      return true;
+    }
+    return false;
+  };
+
+  const onError = (error: NodeJS.ErrnoException) => {
+    if (error.syscall !== "listen") {
       throw error;
-  }
-};
+    }
+    const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
+    switch (error.code) {
+      case "EACCES":
+        console.error(`${bind} requires elevated privileges`);
+        process.exit(1);
+        break;
+      case "EADDRINUSE":
+        console.error(`${bind} is already in use`);
+        process.exit(1);
+        break;
+      default:
+        throw error;
+    }
+  };
 
-const onListening = () => {
-  const addr = server.address();
-  const bind = typeof addr === "string" ? `pipe ${addr}` : `port ${addr.port}`;
-  console.info(`server enabled on ${bind} (Railway deployment)`);
-};
+  const onListening = () => {
+    const addr = server.address();
+    const bind = typeof addr === "string" ? `pipe ${addr}` : `port ${addr.port}`;
+    console.info(`server enabled on ${bind} (Railway deployment)`);
+  };
 
-server.listen(port as number, host);
-server.on("error", onError);
-server.on("listening", onListening);
+  server.listen(port as number, host);
+  server.on("error", onError);
+  server.on("listening", onListening);
