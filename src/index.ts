@@ -26,6 +26,9 @@ class App {
 
   // Configure Express middleware.
   private middleware(): void {
+    // Enable trust proxy for correct secure cookies and protocol detection behind Render/Vercel proxies
+    this.express.set('trust proxy', 1);
+    
     // Prevent Pinggy UI from showing
     this.express.use((req: Request, res: Response, next: NextFunction) => {
       res.setHeader("X-Pinggy-No-Screen", "true");

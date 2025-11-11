@@ -88,7 +88,7 @@ export const securityHeaders = (req: Request, res: Response, next: NextFunction)
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.razorpay.com https://alter-buddy-api-ih2y.onrender.com wss: ws:; frame-src 'none'; object-src 'none'"
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.razorpay.com https://alter-buddy-api.onrender.com https://alter-buddy-api-ih2y.onrender.com wss: ws:; frame-src 'none'; object-src 'none'"
   });
   next();
 };

@@ -240,6 +240,15 @@ export class AuthenticationController implements IController {
         { _id: user._id },
         { $set: { online: true } }
       );
+      // Set secure cookie for cross-domain authentication
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'strict' | 'lax' | 'none',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined
+      };
+      res.cookie('userToken', token, cookieOptions);
       return Ok(res, {
         token,
         message: `${user.name.firstName} ${user.name.lastName} is logged in`,
@@ -481,6 +490,13 @@ export class AuthenticationController implements IController {
         { $set: { online: false } }
       );
       await User.findById({ _id: user._id });
+      // Clear the user cookie (ensure domain matches cookie settings)
+      const clearCookieOptions = {
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'strict' | 'lax' | 'none',
+        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined
+      };
+      res.clearCookie('userToken', clearCookieOptions);
       return Ok(res, `logged out`);
     } catch (err) {
       return UnAuthorized(res, err);
@@ -725,6 +741,13 @@ export class AuthenticationController implements IController {
         { _id: verified.id },
         { $set: { "accountStatus.online": false } }
       );
+      // Clear mentor cookie for cross-device auth
+      const clearMentorCookieOptions = {
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'strict' | 'lax' | 'none',
+        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined
+      };
+      res.clearCookie('mentorToken', clearMentorCookieOptions);
       return Ok(res, `logout successful`);
     } catch (err) {
       return UnAuthorized(res, err);

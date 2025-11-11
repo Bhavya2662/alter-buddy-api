@@ -15,10 +15,10 @@ console.log(`server enabled on port ${port} (Railway deployment)`);
 export const server = http.createServer(app);
 
 export const io = new Server(server, {
-  path: '/socket.io/',
+  path: '/socket.io',
   cors: {
     origin: true,
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true
   },
   transports: ['websocket', 'polling'],
